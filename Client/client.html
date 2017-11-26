@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<title>Test Client</title>
+	</head>
+	<body>
+		<div class="container-fluid">
+			<h1>Catan Game</h1>
+			<div class="row">
+				<div class="col-sm-12 col-lg-9">
+					<canvas id='board' width="600" height="600" style='border: 1px solid black;'>
+					</canvas>
+				</div>
+				<div class="col-sm-12 col-lg-3">
+					Other players
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-sm-12 col-lg-9">
+					Your stuff
+				</div>
+				<div class="col-sm-12 col-lg-3">
+					Actions
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
+
+
+<script>
+	
+	var NONE = "";
+	var GAMESTATE_BOARD = "STATE BOARD";
+	
+	var socket;
+	
+	var expectedMessage = NONE;
+	var board = {};
+	
+	var SHEEP_COLOR = "#a8d242";
+	var WHEAT_COLOR = "#ffd300";
+	var BRICK_COLOR = "#d77b42";
+	var STONE_COLOR = "#797979";
+	var WOOD_COLOR = "#33a642";
+	var DESERT_COLOR = "#fffdb9";
+	var WATER_COLOR = "#3daad6";
+	var NORMAL_NUMBER_COLOR = "#000000";
+	var RED_NUMBER_COLOR = "#ff0000";
+	var ROBBER_COLOR = "#7f7f7f";
+	var NUMBER_BG_COLOR = "#fff";
+	var ALL_PORT_COLOR = "#bbb";
+	
+	$(document).ready(function (){
+		socket = new WebSocket("ws://127.0.0.1:1185");
+		
+		socket.onmessage = function(event) {
+			if(expectedMessage == NONE) {
+				expectedMessage = event.data;
+			} else if(expectedMessage = GAMESTATE_BOARD) {
+				board = JSON.parse(event.data);
+				drawBoard();
+			}
+		}
+		
+	});
+	
+	function drawBoard() {
+		var points = [
+			[100, 50],
+			[75, 100],
+			[25, 100],
+			[0, 50],
+			[25, 0],
+			[75, 0]
+		];
+		var c2 = $("#board")[0].getContext('2d');
+		c2.fillStyle = WATER_COLOR;
+		c2.fillRect(0, 0, 600, 600);
+		
+		addHex(board.tiles[0], 250, 50, points.slice());
+		addHex(board.tiles[1], 325, 100, points.slice());
+		addHex(board.tiles[2], 400, 150, points.slice());
+		addHex(board.tiles[3], 400, 250, points.slice());
+		addHex(board.tiles[4], 400, 350, points.slice());
+		addHex(board.tiles[5], 325, 400, points.slice());
+		addHex(board.tiles[6], 250, 450, points.slice());
+		addHex(board.tiles[7], 175, 400, points.slice());
+		addHex(board.tiles[8], 100, 350, points.slice());
+		addHex(board.tiles[9], 100, 250, points.slice());
+		addHex(board.tiles[10], 100, 150, points.slice());
+		addHex(board.tiles[11], 175, 100, points.slice());
+		addHex(board.tiles[12], 250, 150, points.slice());
+		addHex(board.tiles[13], 325, 200, points.slice());
+		addHex(board.tiles[14], 325, 300, points.slice());
+		addHex(board.tiles[15], 250, 350, points.slice());
+		addHex(board.tiles[16], 175, 300, points.slice());
+		addHex(board.tiles[17], 175, 200, points.slice());
+		addHex(board.tiles[18], 250, 250, points.slice());
+		
+		console.log(board.edges);
+		var upwards = [
+			[20, 0],
+			[0, 40],
+			[40, 40]
+		];
+		var downwards = [
+			[0, 0],
+			[40, 0],
+			[20, 40]
+		];
+		//dy = 50 half, 100 full
+		//dx = 75 half, 150 full
+		addEdge(board.edges[0], [280, 5, 1], [355, 50, 1], [410, 100, 0], upwards, downwards);
+		addEdge(board.edges[1], [480, 150, 0], [480, 250, 0], [485, 305, 1], upwards, downwards);
+		addEdge(board.edges[2], [485, 405, 1], [410, 455, 1], [355, 505, 0], upwards, downwards);
+		addEdge(board.edges[3], [280, 555, 0], [205, 505, 0], [150, 455, 1], upwards, downwards);
+		addEdge(board.edges[4], [75, 410, 1], [75, 310, 1], [75, 250, 0], upwards, downwards);
+		addEdge(board.edges[5], [75, 150, 0], [150, 100, 0], [205, 50, 1], upwards, downwards);
+	}
+	
+	function addEdge(edge, first, second, third, upwards, downwards) {
+		if(edge.ports.length == 1) {
+			var triangle;
+			if(second[2] == 1) {
+				triangle = upwards;
+			} else {
+				triangle = downwards;
+			}
+			addPort(edge.ports[0].type, second, triangle);
+		} else {
+			var triangle;
+			if(first[2] == 1) {
+				triangle = upwards;
+			} else {
+				triangle = downwards;
+			}
+			addPort(edge.ports[0].type, first, triangle);
+			if(third[2] == 1) {
+				triangle = upwards;
+			} else {
+				triangle = downwards;
+			}
+			addPort(edge.ports[1].type, third, triangle);
+		}
+	}
+	
+	function addPort(resource, offset, triangle) {
+		var c2 = $("#board")[0].getContext('2d');
+		if(resource == "Sheep") {
+			c2.fillStyle = SHEEP_COLOR;
+		} else if(resource == "Brick") {
+			c2.fillStyle = BRICK_COLOR;
+		} else if(resource == "Stone") {
+			c2.fillStyle = STONE_COLOR;
+		} else if(resource == "Wood") {
+			c2.fillStyle = WOOD_COLOR;
+		} else if(resource == "Wheat") {
+			c2.fillStyle = WHEAT_COLOR;
+		} else if(resource == "All") {
+			c2.fillStyle = ALL_PORT_COLOR;
+		} else {
+			console.log(resource);
+		}
+		c2.beginPath();
+		c2.moveTo(offset[0] + triangle[0][0], offset[1] + triangle[0][1]);
+		c2.lineTo(offset[0] + triangle[1][0], offset[1] + triangle[1][1]);
+		c2.lineTo(offset[0] + triangle[2][0], offset[1] + triangle[2][1]);
+		c2.closePath();
+		c2.fill();
+		
+		c2.beginPath();
+		c2.moveTo(offset[0] + triangle[0][0], offset[1] + triangle[0][1]);
+		c2.lineTo(offset[0] + triangle[1][0], offset[1] + triangle[1][1]);
+		c2.lineTo(offset[0] + triangle[2][0], offset[1] + triangle[2][1]);
+		c2.closePath();
+		c2.stroke();
+	}
+	
+	function addHex(tile, horizontalOffset, verticalOffset, points) {
+		var c2 = $("#board")[0].getContext('2d');
+		if(tile.resource == "Sheep") {
+			c2.fillStyle = SHEEP_COLOR;
+		} else if(tile.resource == "Brick") {
+			c2.fillStyle = BRICK_COLOR;
+		} else if(tile.resource == "Stone") {
+			c2.fillStyle = STONE_COLOR;
+		} else if(tile.resource == "Wood") {
+			c2.fillStyle = WOOD_COLOR;
+		} else if(tile.resource == "Wheat") {
+			c2.fillStyle = WHEAT_COLOR;
+		} else if(tile.resource == "None") {
+			c2.fillStyle = DESERT_COLOR;
+		} else {
+			console.log(tile);
+		}
+		c2.beginPath();
+		c2.moveTo(points[0][0] + horizontalOffset, points[0][1] + verticalOffset);
+		for(var i = 1; i < points.length; i++) {
+			var x = points[i][0] + horizontalOffset;
+			var y = points[i][1] + verticalOffset;
+			c2.lineTo(x, y);
+		}
+		c2.closePath();
+		c2.stroke();
+		c2.beginPath();
+		c2.moveTo(points[0][0] + horizontalOffset, points[0][1] + verticalOffset);
+		for(var i = 1; i < points.length; i++) {
+			var x = points[i][0] + horizontalOffset;
+			var y = points[i][1] + verticalOffset;
+			c2.lineTo(x, y);
+		}
+		c2.closePath();
+		c2.fill();
+				
+		if(tile.resource != "None") {
+			c2.fillStyle = NUMBER_BG_COLOR;
+			c2.beginPath();
+			c2.arc(50 + horizontalOffset, 50 + verticalOffset, 20, 0, 2 * Math.PI);
+			c2.fill();
+			
+			c2.font = "20px Arial";
+			if(tile.roll == 6 || tile.roll == 8) {
+				c2.fillStyle = RED_NUMBER_COLOR;
+			} else {
+				c2.fillStyle = NORMAL_NUMBER_COLOR;
+			}
+			var textWidth = c2.measureText(tile.roll).width;
+			c2.fillText(tile.roll, 50 - textWidth / 2 + horizontalOffset, 56 + verticalOffset);
+		}
+	}
+</script>
