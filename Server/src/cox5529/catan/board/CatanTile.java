@@ -6,9 +6,35 @@ public class CatanTile {
 
 	private Card resource;
 	private int roll;
+	private int exteriorStart;
+	private int exteriorEnd;
+	private CatanLink[] links;
 
-	public CatanTile(Card resource) {
+	public CatanTile(Card resource, int exteriorStart, int exteriorEnd) {
 		this.resource = resource;
+		this.exteriorStart = exteriorStart;
+		this.exteriorEnd = exteriorEnd;
+		links = new CatanLink[6];
+	}
+
+	public int getExteriorStart() {
+		return exteriorStart;
+	}
+
+	public int getExteriorEnd() {
+		return exteriorEnd;
+	}
+
+	public void setExteriorStart(int exteriorStart) {
+		this.exteriorStart = exteriorStart;
+	}
+
+	public void setExteriorEnd(int exteriorEnd) {
+		this.exteriorEnd = exteriorEnd;
+	}
+
+	public CatanLink[] getLinks() {
+		return links;
 	}
 
 	public Card getResource() {
@@ -25,6 +51,16 @@ public class CatanTile {
 
 	public void setRoll(int roll) {
 		this.roll = roll;
+	}
+
+	public void swapExterior(CatanTile tile) {
+		int temp = exteriorStart;
+		exteriorStart = tile.getExteriorStart();
+		tile.setExteriorStart(temp);
+
+		temp = exteriorEnd;
+		exteriorEnd = tile.getExteriorEnd();
+		tile.setExteriorEnd(temp);
 	}
 
 	@Override
