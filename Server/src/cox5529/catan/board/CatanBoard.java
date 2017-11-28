@@ -94,7 +94,6 @@ public class CatanBoard {
 				}
 			}
 		}
-		System.out.println("Filled spaces");
 
 		links = new CatanLink[76];
 		int linkIndex = 0;
@@ -315,7 +314,6 @@ public class CatanBoard {
 	}
 
 	private void shuffleArrays() {
-		System.out.println("Shuffling board...");
 		for (int i = 0; i < tiles.length; i++) {
 			for (int j = 0; j < tiles[i].length; j++) {
 				if (tiles[i][j] == null) continue;
@@ -341,11 +339,9 @@ public class CatanBoard {
 				ports[r + j] = temp;
 			}
 		}
-		System.out.println("Finished shuffling board");
 	}
 
 	public static CatanBoard generate() {
-		System.out.println("Generating board...");
 		CatanBoard board = new CatanBoard();
 		board.shuffleArrays();
 		int[] rolls = new int[18];
@@ -384,11 +380,8 @@ public class CatanBoard {
 				}
 			}
 		}
-		System.out.println("Filling secondary arrays");
 		board.fillSecondaryArrays();
-		System.out.println("Linking board elements");
 		board.linkElements();
-		System.out.println("Generated board");
 		return board;
 	}
 

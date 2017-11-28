@@ -2,6 +2,7 @@
 <html>
 	<head>
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+		<link rel="stylesheet" href="style.css" />
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
 		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
@@ -12,20 +13,31 @@
 		<div class="container-fluid">
 			<h1>Catan Game</h1>
 			<div class="row">
-				<div class="col-sm-12 col-lg-9">
-					<canvas id='board' width="600" height="600" style='border: 1px solid black;'>
+				<div class="col-sm-12 col-lg-8 col-xl-6">
+					<h3>Board</h3>
+					<canvas id='board' width="570" height="600" style='border: 1px solid black;'>
 					</canvas>
 				</div>
-				<div class="col-sm-12 col-lg-3">
-					Other players
+				<div class="col-sm-12 col-lg-4 col-xl-3">
+					<h3>Other Players</h3>
+				</div>
+				<div class="col-sm-12 col-xl-3">
+					<h3>Console</h3>
+					<div class="first-row" id='console'></div>
 				</div>
 			</div>
 			<div class="row">
-				<div class="col-sm-12 col-lg-9">
-					Your stuff
+				<div class="col-sm-12 col-xl-9">
+					<h3>Your Cards</h3>
 				</div>
-				<div class="col-sm-12 col-lg-3">
-					Actions
+				<div class="col-sm-12 col-xl-3">
+					<h3>Actions</h3>
+					<form id="pregame">
+						<input name="name" type="text" class="form-control mb-2 mr-sm-2 mb-sm-0" id="game-name" placeholder="Game name" />
+						<br />
+						<input name="submit" value="New Game" type="submit" class="btn btn-primary" />
+						<input name="submit" value="Join Game" type="submit" class="btn btn-primary" />
+					</form>
 				</div>
 			</div>
 		</div>
@@ -37,8 +49,15 @@
 	
 	var NONE = "";
 	var GAMESTATE_BOARD = "STATE BOARD";
+	var GAMESTATE_PLAYERS = "STATE PLAYERS";
+	var START_GAME = "GAME START";
+	var JOIN_GAME = "GAME JOIN";
+	var USERNAME = "USERNAME";
+	var CONSOLE = "CONSOLE";
 	
 	var socket;
+	var state = 0;
+	var username = "Brandon";
 	
 	var expectedMessage = NONE;
 	var board = {};
@@ -64,23 +83,58 @@
 		socket = new WebSocket("ws://127.0.0.1:1185");
 		
 		socket.onmessage = function(event) {
+			var setExpectedMessage = false;
 			if(expectedMessage == NONE) {
 				expectedMessage = event.data;
-			} else if(expectedMessage = GAMESTATE_BOARD) {
+				console.log(expectedMessage);
+				setExpectedMessage = true;
+			} else if(expectedMessage == GAMESTATE_BOARD) {
 				board = JSON.parse(event.data);
 				drawBoard();
+			} else if(expectedMessage == GAMESTATE_PLAYERS) {
+				console.log(event.data);
+			} else if(expectedMessage == CONSOLE) {
+				showMessage(event.data);
 			}
+			
+			if(!setExpectedMessage)
+				expectedMessage = NONE;
 		}
 		
+		socket.onopen = function(event) {
+			socket.send(USERNAME + " " + username);
+		}
 	});
+	
+	$("#pregame").on('submit', function(e) {
+		e.preventDefault();
+		var data = $("#pregame :input").serializeArray();
+		var val = {name: "submit", value: $("input[type=submit][clicked=true]").val()};
+		data.push(val);
+		
+		if(data[1].value == "New Game") {
+			socket.send(START_GAME + " " + data[0].value);
+		} else {
+			socket.send(JOIN_GAME + " " + data[0].value);
+		}
+	});
+	
+	$("form input[type=submit]").click(function() {
+		$("input[type=submit]", $(this).parents("form")).removeAttr("clicked");
+		$(this).attr("clicked", "true");
+	});
+	
+	function showMessage(message) {
+		$("#console").append("<div>"+message+"</div>");
+		$("#console").stop().animate({scrollTop: $("#console")[0].scrollHeight}, 1000);
+	}
 	
 	function drawBoard() {
 		var canvas = $("#board")[0].getContext('2d');
 		canvas.fillStyle = WATER_COLOR;
 		canvas.fillRect(0, 0, 600, 600);
-		var xOffsetGlobal = $("#board")[0].width / 2 - 5 * HEX_WIDTH / 2 * 3 / 4;
+		var xOffsetGlobal = $("#board")[0].width / 2 - 4 * HEX_WIDTH / 2;
 		var yOffsetGlobal = $("#board")[0].height / 2 - 5 * HEX_HEIGHT / 2;
-		console.log(board);
 	
 		drawHexes(xOffsetGlobal, yOffsetGlobal, canvas, board.tiles);
 		drawLinks(xOffsetGlobal, yOffsetGlobal, canvas, board.links);
