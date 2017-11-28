@@ -10,7 +10,6 @@ public class CatanBoard {
 	private CatanTile[][] tiles; // diagonal, column
 	private CatanPort[] ports;
 	private CatanLink[] links;
-	private CatanSpace[] spaces;
 
 	public CatanBoard() {
 		fillArrays();
@@ -22,10 +21,6 @@ public class CatanBoard {
 
 	public CatanPort[] getPorts() {
 		return ports;
-	}
-
-	public CatanSpace[] getSpaces() {
-		return spaces;
 	}
 
 	public CatanLink[] getLinks() {
@@ -54,21 +49,19 @@ public class CatanBoard {
 		tiles[5][3] = new CatanTile(Card.Wood, 2, 4);
 		tiles[5][4] = new CatanTile(Card.Wood, 1, 4);
 
-		ports = new CatanPort[9];
-		ports[0] = new CatanPort(Card.All);
+		ports = new CatanPort[18];
 		ports[1] = new CatanPort(Card.All);
-		ports[2] = new CatanPort(Card.All);
 		ports[3] = new CatanPort(Card.All);
-		ports[4] = new CatanPort(Card.Wheat);
-		ports[5] = new CatanPort(Card.Stone);
-		ports[6] = new CatanPort(Card.Sheep);
+		ports[5] = new CatanPort(Card.Brick);
 		ports[7] = new CatanPort(Card.Wood);
-		ports[8] = new CatanPort(Card.Brick);
+		ports[9] = new CatanPort(Card.All);
+		ports[11] = new CatanPort(Card.Wheat);
+		ports[13] = new CatanPort(Card.Stone);
+		ports[15] = new CatanPort(Card.All);
+		ports[17] = new CatanPort(Card.Sheep);
 	}
 
 	private void fillSecondaryArrays() {
-		spaces = new CatanSpace[54];
-		int spaceIndex = 0;
 		for (int i = 0; i < tiles.length; i++) {
 			for (int j = 0; j < tiles[i].length; j++) {
 				if (tiles[i][j] != null) {
@@ -77,7 +70,7 @@ public class CatanBoard {
 						int[][] hexes = getBorderingHexesSpace(i, j, k);
 						if (hexCount > 1) {
 							boolean done = false;
-							for (int l = 1; l < hexes.length; l++) {
+							for (int l = 0; l < hexes.length; l++) {
 								if (hexes[l][0] < i || (hexes[l][0] == i && hexes[l][1] < j)) {
 									done = true;
 									break;
@@ -88,21 +81,14 @@ public class CatanBoard {
 								for (int[] point : hexes) {
 									CatanTile tile = getTile(point[0], point[1]);
 									space.addTile(tile);
+									tile.getSpaces()[point[2]] = space;
 								}
-								space.setDiagonal(i);
-								space.setColumn(j);
-								space.setPosition(k);
-								spaces[spaceIndex] = space;
-								spaceIndex++;
+
 							}
 						} else {
 							CatanSpace space = new CatanSpace();
 							space.addTile(tiles[i][j]);
-							space.setDiagonal(i);
-							space.setColumn(j);
-							space.setPosition(k);
-							spaces[spaceIndex] = space;
-							spaceIndex++;
+							tiles[i][j].getSpaces()[k] = space;
 						}
 					}
 				}
@@ -153,21 +139,17 @@ public class CatanBoard {
 	}
 
 	private CatanSpace findSpace(int diagonal, int column, int position) {
-		for (CatanSpace space : spaces) {
-			if (space.getDiagonal() == diagonal && space.getColumn() == column && space.getPosition() == position) {
-				return space;
-			}
+		if (diagonal >= 1 && diagonal <= 5 && column >= 0 && column <= 4 && position >= 0 && position <= 6) {
+			return tiles[diagonal][column].getSpaces()[position];
+		} else {
+			return null;
 		}
-		return null;
 	}
 
 	private int getHexCountLink(int i, int j, int k) {
-		if (getHexCountSpace(i, j, k) == 3)
-			return 2;
-		if (k > tiles[i][j].getExteriorStart() && k <= tiles[i][j].getExteriorEnd())
-			return 1;
-		if (k > tiles[i][j].getExteriorStart() || k <= tiles[i][j].getExteriorEnd())
-			return 1;
+		if (getHexCountSpace(i, j, k) == 3) return 2;
+		if (k > tiles[i][j].getExteriorStart() && k <= tiles[i][j].getExteriorEnd()) return 1;
+		if (k > tiles[i][j].getExteriorStart() || k <= tiles[i][j].getExteriorEnd()) return 1;
 		return 2;
 	}
 
@@ -176,8 +158,7 @@ public class CatanBoard {
 		int[][] re = new int[hexCount][2];
 		re[0][0] = i;
 		re[0][1] = j;
-		if (hexCount == 1)
-			return re;
+		if (hexCount == 1) return re;
 		int index = 1;
 		if (k == 0) {
 			if (getTile(i - 1, j - 1) != null) {
@@ -232,16 +213,17 @@ public class CatanBoard {
 
 	private int[][] getBorderingHexesSpace(int i, int j, int k) {
 		int hexCount = getHexCountSpace(i, j, k);
-		int[][] re = new int[hexCount][2];
+		int[][] re = new int[hexCount][3];
 		re[0][0] = i;
 		re[0][1] = j;
-		if (hexCount == 1)
-			return re;
+		re[0][2] = k;
+		if (hexCount == 1) return re;
 		int index = 1;
 		if (k == 0 || k == 1) {
 			if (getTile(i - 1, j) != null) {
 				re[index][0] = i - 1;
 				re[index][1] = j;
+				re[index][2] = 4 - k;
 				index++;
 			}
 		}
@@ -249,6 +231,7 @@ public class CatanBoard {
 			if (getTile(i, j + 1) != null) {
 				re[index][0] = i;
 				re[index][1] = j + 1;
+				re[index][2] = 6 - k;
 				index++;
 			}
 		}
@@ -256,6 +239,8 @@ public class CatanBoard {
 			if (getTile(i + 1, j + 1) != null) {
 				re[index][0] = i + 1;
 				re[index][1] = j + 1;
+				if (k == 2) re[index][2] = 0;
+				else re[index][2] = 5;
 				index++;
 			}
 		}
@@ -263,6 +248,7 @@ public class CatanBoard {
 			if (getTile(i + 1, j) != null) {
 				re[index][0] = i + 1;
 				re[index][1] = j;
+				re[index][2] = 4 - k;
 				index++;
 			}
 		}
@@ -270,6 +256,7 @@ public class CatanBoard {
 			if (getTile(i, j - 1) != null) {
 				re[index][0] = i;
 				re[index][1] = j - 1;
+				re[index][2] = 6 - k;
 				index++;
 			}
 		}
@@ -277,6 +264,8 @@ public class CatanBoard {
 			if (getTile(i - 1, j - 1) != null) {
 				re[index][0] = i - 1;
 				re[index][1] = j - 1;
+				if (k == 5) re[index][2] = 3;
+				else re[index][2] = 2;
 			}
 		}
 		return re;
@@ -294,6 +283,35 @@ public class CatanBoard {
 		} else {
 			return 3;
 		}
+	}
+
+	private void linkElements() {
+		getLink(1, 2, 1).setPort(ports[0]);
+		getLink(2, 3, 1).setPort(ports[1]);
+		getLink(2, 3, 2).setPort(ports[2]);
+		getLink(3, 4, 2).setPort(ports[3]);
+		getLink(4, 4, 2).setPort(ports[4]);
+		getLink(4, 4, 3).setPort(ports[5]);
+		getLink(5, 4, 3).setPort(ports[6]);
+		getLink(5, 3, 3).setPort(ports[7]);
+		getLink(5, 3, 4).setPort(ports[8]);
+		getLink(5, 2, 4).setPort(ports[9]);
+		getLink(4, 1, 4).setPort(ports[10]);
+		getLink(4, 1, 5).setPort(ports[11]);
+		getLink(3, 0, 5).setPort(ports[12]);
+		getLink(2, 0, 5).setPort(ports[13]);
+		getLink(2, 0, 0).setPort(ports[14]);
+		getLink(1, 0, 0).setPort(ports[15]);
+		getLink(1, 1, 0).setPort(ports[16]);
+		getLink(1, 1, 1).setPort(ports[17]);
+	}
+
+	private CatanLink getLink(int diagonal, int column, int position) {
+		for (CatanLink link : links) {
+			if (link.getDiagonal() == diagonal && link.getColumn() == column && link.getPosition() == position)
+				return link;
+		}
+		return null;
 	}
 
 	private void shuffleArrays() {
@@ -314,11 +332,14 @@ public class CatanBoard {
 				tiles[i][j].swapExterior(tiles[x][y]);
 			}
 		}
-		for (int i = 0; i < ports.length; i++) {
-			int r = (int) (Math.random() * ports.length);
-			CatanPort temp = ports[i];
-			ports[i] = ports[r];
-			ports[r] = temp;
+		int edgeLength = 3;
+		for (int i = 0; i < ports.length; i += edgeLength) {
+			int r = (int) (Math.random() * ports.length / edgeLength) * edgeLength;
+			for(int j = 0; j < edgeLength; j++) {
+				CatanPort temp = ports[i + j];
+				ports[i + j] = ports[r + j];
+				ports[r + j] = temp;
+			}
 		}
 		System.out.println("Finished shuffling board");
 	}
@@ -365,17 +386,10 @@ public class CatanBoard {
 		}
 		System.out.println("Filling secondary arrays");
 		board.fillSecondaryArrays();
+		System.out.println("Linking board elements");
+		board.linkElements();
 		System.out.println("Generated board");
 		return board;
 	}
 
-	@Override
-	public String toString() {
-		return "CatanBoard{" +
-				"tiles=" + Arrays.toString(tiles) +
-				", ports=" + Arrays.toString(ports) +
-				", links=" + Arrays.toString(links) +
-				", spaces=" + Arrays.toString(spaces) +
-				'}';
-	}
 }

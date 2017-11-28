@@ -1,8 +1,12 @@
 package cox5529.catan.board;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class CatanLink {
 
+	@JsonIgnore
 	private CatanSpace frontSpace;
+	@JsonIgnore
 	private CatanSpace rearSpace;
 
 	private int road;
@@ -13,6 +17,14 @@ public class CatanLink {
 
 	public CatanLink() {
 		road = -1;
+	}
+
+	public void setPort(CatanPort port) {
+		if (port != null) {
+			port.setLink(this);
+			frontSpace.setPort(port);
+			rearSpace.setPort(port);
+		}
 	}
 
 	public int getDiagonal() {
@@ -52,6 +64,7 @@ public class CatanLink {
 	}
 
 	public void setFrontSpace(CatanSpace frontSpace) {
+		frontSpace.addLink(this);
 		this.frontSpace = frontSpace;
 	}
 
@@ -60,6 +73,7 @@ public class CatanLink {
 	}
 
 	public void setRearSpace(CatanSpace rearSpace) {
+		rearSpace.addLink(this);
 		this.rearSpace = rearSpace;
 	}
 }

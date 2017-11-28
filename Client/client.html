@@ -81,7 +81,13 @@
 		var xOffsetGlobal = $("#board")[0].width / 2 - 5 * HEX_WIDTH / 2 * 3 / 4;
 		var yOffsetGlobal = $("#board")[0].height / 2 - 5 * HEX_HEIGHT / 2;
 		console.log(board);
-		var tiles = board.tiles;
+	
+		drawHexes(xOffsetGlobal, yOffsetGlobal, canvas, board.tiles);
+		drawLinks(xOffsetGlobal, yOffsetGlobal, canvas, board.links);
+		drawPorts(xOffsetGlobal, yOffsetGlobal, canvas, board.ports);
+	}
+	
+	function drawHexes(xOffsetGlobal, yOffsetGlobal, canvas, tiles) {
 		for(var i = 0; i < tiles.length; i++) {
 			for(var j = 0; j < tiles[i].length; j++) {
 				if(tiles[i][j] != null) {
@@ -144,6 +150,8 @@
 					canvas.closePath();
 					canvas.stroke();
 					
+					drawSpaces(xOffsetGlobal, yOffsetGlobal, canvas, tiles[i][j], j, i);
+					
 					if(tiles[i][j].resource != "None") {
 						var horizontalOffset = xOffset + xOffsetGlobal + HEX_WIDTH / 2;
 						var verticalOffset = yOffset + yOffsetGlobal + HEX_HEIGHT / 2
@@ -166,30 +174,31 @@
 				}
 			}
 		}
+	}
 	
-		var spaces = board.spaces;
+	function drawSpaces(xOffsetGlobal, yOffsetGlobal, canvas, tile, column, diagonal) {
+		var spaces = tile.spaces;
 		for(var i = 0; i < spaces.length; i++) {
 			var space = spaces[i];
-			
 			if(space.building != null) {
-				var x = xOffsetGlobal + space.column * HEX_WIDTH * 3 / 4 + HEX_WIDTH / 4;
-				var y = yOffsetGlobal + space.diagonal * HEX_HEIGHT - space.column * HEX_HEIGHT / 2;
+				var x = xOffsetGlobal + column * HEX_WIDTH * 3 / 4 + HEX_WIDTH / 4;
+				var y = yOffsetGlobal + diagonal * HEX_HEIGHT - column * HEX_HEIGHT / 2;
 				
-				if(space.position >= 1) {
+				if(i >= 1) {
 					x += HEX_WIDTH / 2;
 				}
-				if(space.position >= 2) {
+				if(i >= 2) {
 					x += HEX_WIDTH / 4;
 					y += HEX_HEIGHT / 2;
 				}
-				if(space.position >= 3) {
+				if(i >= 3) {
 					x -= HEX_WIDTH / 4;
 					y += HEX_HEIGHT / 2;
 				}
-				if(space.position >= 4) {
+				if(i >= 4) {
 					x -= HEX_WIDTH / 2;
 				}
-				if(space.position >= 5) {
+				if(i >= 5) {
 					x -= HEX_WIDTH / 4;
 					y -= HEX_HEIGHT / 2;
 				}
@@ -200,8 +209,9 @@
 				canvas.fill();
 			}
 		}
+	}
 	
-		var links = board.links;
+	function drawLinks(xOffsetGlobal, yOffsetGlobal, canvas, links) {
 		for(var i = 0; i < links.length; i++) {
 			var x = [];
 			var y = [];
@@ -219,57 +229,104 @@
 			y.push(yOffsetGlobal + links[i].diagonal * HEX_HEIGHT - links[i].column * HEX_HEIGHT / 2 + HEX_HEIGHT);
 			y.push(yOffsetGlobal + links[i].diagonal * HEX_HEIGHT - links[i].column * HEX_HEIGHT / 2 + HEX_HEIGHT / 2);
 			
-			var xPts = [];
-			var yPts = [];
-			
-			if(links[i].position == 0) {
-				xPts.push(x[5]);
-				xPts.push(x[0]);
-				yPts.push(y[5]);
-				yPts.push(y[0]);
-			} else if(links[i].position == 1) {
-				xPts.push(x[0]);
-				xPts.push(x[1]);
-				yPts.push(y[0]);
-				yPts.push(y[1]);
-			} else if(links[i].position == 2) {
-				xPts.push(x[1]);
-				xPts.push(x[2]);
-				yPts.push(y[1]);
-				yPts.push(y[2]);
-			} else if(links[i].position == 3) {
-				xPts.push(x[2]);
-				xPts.push(x[3]);
-				yPts.push(y[2]);
-				yPts.push(y[3]);
-			} else if(links[i].position == 4) {
-				xPts.push(x[3]);
-				xPts.push(x[4]);
-				yPts.push(y[3]);
-				yPts.push(y[4]);
-			} else if(links[i].position == 5) {
-				xPts.push(x[4]);
-				xPts.push(x[5]);
-				yPts.push(y[4]);
-				yPts.push(y[5]);
-			}
+			var idx1 = links[i].position - 1;
+			if(idx1 < 0) idx1 += 6;
+			var idx2 = links[i].position;
 			
 			if(links[i].road != -1) {
 				canvas.lineWidth = 5;
 				canvas.beginPath();
-				canvas.moveTo(xPts[0], yPts[0]);
-				canvas.lineTo(xPts[1], yPts[1]);
+				canvas.moveTo(x[idx1], y[idx1]);
+				canvas.lineTo(x[idx2], y[idx2]);
 				canvas.closePath();
 				canvas.stroke();
 			}
 		}
 	}
-	
-	function addPort(resource, offset, triangle) {
-		
-	}
-	
-	function addHex(tile, horizontalOffset, verticalOffset, points) {
-		
+
+	function drawPorts(xOffsetGlobal, yOffsetGlobal, canvas, ports) {
+		for(var i = 0; i < ports.length; i++) {
+			var port = ports[i];
+			
+			if(port != null && port.link != null) {
+				var lin = port.link;
+				var x = [];
+				var y = [];
+				x.push(xOffsetGlobal + lin.column * HEX_WIDTH * 3 / 4 + HEX_WIDTH / 4);
+				x.push(xOffsetGlobal + lin.column * HEX_WIDTH * 3 / 4 + HEX_WIDTH * 3 / 4);
+				x.push(xOffsetGlobal + lin.column * HEX_WIDTH * 3 / 4 + HEX_WIDTH);
+				x.push(xOffsetGlobal + lin.column * HEX_WIDTH * 3 / 4 + HEX_WIDTH * 3 / 4);
+				x.push(xOffsetGlobal + lin.column * HEX_WIDTH * 3 / 4 + HEX_WIDTH / 4);
+				x.push(xOffsetGlobal + lin.column * HEX_WIDTH * 3 / 4);
+				
+				y.push(yOffsetGlobal + lin.diagonal * HEX_HEIGHT - lin.column * HEX_HEIGHT / 2);
+				y.push(yOffsetGlobal + lin.diagonal * HEX_HEIGHT - lin.column * HEX_HEIGHT / 2);
+				y.push(yOffsetGlobal + lin.diagonal * HEX_HEIGHT - lin.column * HEX_HEIGHT / 2 + HEX_HEIGHT / 2);
+				y.push(yOffsetGlobal + lin.diagonal * HEX_HEIGHT - lin.column * HEX_HEIGHT / 2 + HEX_HEIGHT);
+				y.push(yOffsetGlobal + lin.diagonal * HEX_HEIGHT - lin.column * HEX_HEIGHT / 2 + HEX_HEIGHT);
+				y.push(yOffsetGlobal + lin.diagonal * HEX_HEIGHT - lin.column * HEX_HEIGHT / 2 + HEX_HEIGHT / 2);
+				
+				var idx1 = lin.position - 1;
+				if(idx1 < 0) idx1 += 6;
+				var idx2 = lin.position;
+				
+				var mX = (x[idx1] + x[idx2]) / 2;
+				var mY = (y[idx1] + y[idx2]) / 2;
+				var slope = -(x[idx1] - x[idx2]) / (y[idx1] - y[idx2]);
+				var dx = HEX_SIDE / Math.sqrt(1 + slope * slope);
+				if(lin.position == 5 || lin.position == 0) {
+					dx *= -1;
+				}
+				var dy = slope * dx;
+				
+				var portX = mX + dx;
+				var portY = mY + dy;
+				if(slope == Infinity) {
+					portX = mX;
+					portY = mY - HEX_SIDE;
+				} else if(slope == -1 * Infinity) {
+					portX = mX;
+					portY = mY + HEX_SIDE;
+				}
+				
+				canvas.beginPath();
+				canvas.moveTo(x[idx1], y[idx1]);
+				canvas.lineTo(portX, portY);
+				canvas.moveTo(x[idx1], y[idx1]);
+				canvas.closePath();
+				canvas.stroke();
+				
+				canvas.beginPath();
+				canvas.moveTo(x[idx2], y[idx2]);
+				canvas.lineTo(portX, portY);
+				canvas.moveTo(x[idx2], y[idx2]);
+				canvas.closePath();
+				canvas.stroke();
+				
+				if(port.type == "Wheat") {
+					canvas.fillStyle = WHEAT_COLOR;
+				} else if(port.type == "Sheep") {
+					canvas.fillStyle = SHEEP_COLOR;
+				} else if(port.type == "Stone") {
+					canvas.fillStyle = STONE_COLOR;
+				} else if(port.type == "Brick") {
+					canvas.fillStyle = BRICK_COLOR;
+				} else if(port.type == "Wood") {
+					canvas.fillStyle = WOOD_COLOR;
+				} else if(port.type == "All") {
+					canvas.fillStyle = ALL_PORT_COLOR;
+				}
+				canvas.beginPath();
+				canvas.moveTo(portX, portY);
+				canvas.arc(portX, portY, 10, 0, Math.PI * 2);
+				canvas.closePath();
+				canvas.fill();
+				canvas.moveTo(portX, portY);
+				canvas.beginPath();
+				canvas.arc(portX, portY, 10, 0, Math.PI * 2);
+				canvas.closePath();
+				canvas.stroke();
+			}
+		}
 	}
 </script>

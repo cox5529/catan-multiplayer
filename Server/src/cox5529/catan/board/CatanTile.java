@@ -2,23 +2,29 @@ package cox5529.catan.board;
 
 import cox5529.catan.Card;
 
+import java.util.Arrays;
+
 public class CatanTile {
 
 	private Card resource;
 	private int roll;
 	private int exteriorStart;
 	private int exteriorEnd;
-	private CatanLink[] links;
+	private CatanSpace[] spaces;
 
 	public CatanTile(Card resource, int exteriorStart, int exteriorEnd) {
 		this.resource = resource;
 		this.exteriorStart = exteriorStart;
 		this.exteriorEnd = exteriorEnd;
-		links = new CatanLink[6];
+		spaces = new CatanSpace[6];
 	}
 
 	public int getExteriorStart() {
 		return exteriorStart;
+	}
+
+	public CatanSpace[] getSpaces() {
+		return spaces;
 	}
 
 	public int getExteriorEnd() {
@@ -31,10 +37,6 @@ public class CatanTile {
 
 	public void setExteriorEnd(int exteriorEnd) {
 		this.exteriorEnd = exteriorEnd;
-	}
-
-	public CatanLink[] getLinks() {
-		return links;
 	}
 
 	public Card getResource() {
