@@ -2,6 +2,7 @@ package cox5529.catan;
 
 
 import cox5529.catan.board.CatanBoard;
+import cox5529.catan.player.AIPlayer;
 import cox5529.catan.player.Player;
 import cox5529.catan.player.PlayerData;
 import cox5529.catan.player.RemotePlayer;
@@ -17,25 +18,45 @@ public class CatanGame {
 	public CatanGame() {
 		board = CatanBoard.generate();
 		players = new ArrayList<>();
+		for (int i = 0; i < 4; i++) {
+			players.add(new AIPlayer(i));
+		}
 	}
 
-	public void addPlayer(Player player) {
+	public void addPlayer(RemotePlayer player) {
 		player.setGame(this);
-		players.add(player);
-		player.setTeam(players.size() - 1);
+		for (int i = 0; i < players.size(); i++) {
+			if (players.get(i) instanceof AIPlayer) {
+				RemotePlayer remotePlayer = players.get(i).toRemotePlayer(player.getConnection());
+				remotePlayer.setName(player.getName());
+				players.set(i, remotePlayer);
+				break;
+			}
+		}
+		broadcastGameState();
+		broadcastConsoleMessage(player.getName() + " has joined the game");
+	}
+
+	public void removePlayer(Player player, String reason) {
+		players.remove(player);
+		broadcastGameState();
+		broadcastConsoleMessage(player.getName() + " has left the game. Reason: " + reason);
+	}
+
+	private void broadcastGameState() {
 		for (Player p : players)
 			p.sendGameState(board, p.getHand(), p.getDevCards(), buildPlayerData());
-		broadcastConsoleMessage(player.getName() + " has joined the game");
 	}
 
 	private ArrayList<PlayerData> buildPlayerData() {
 		ArrayList<PlayerData> data = new ArrayList<>();
 		for (Player player : players) {
 			PlayerData pdata = new PlayerData();
-			pdata.setTeam(pdata.getTeam());
+			pdata.setTeam(player.getTeam());
 			pdata.setCards(player.getHand().size());
 			pdata.setDevCards(player.getDevCards().size());
 			pdata.setPlayedDevCards(player.getPlayedDevCards());
+			pdata.setName(player.getName());
 			data.add(pdata);
 		}
 		return data;

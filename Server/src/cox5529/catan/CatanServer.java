@@ -34,7 +34,9 @@ public class CatanServer extends WebSocketServer {
 
 	@Override
 	public void onClose(WebSocket conn, int code, String reason, boolean remote) {
-
+		RemotePlayer player = players.get(conn);
+		player.getGame().removePlayer(player, "Disconnected.");
+		players.remove(player);
 	}
 
 	@Override

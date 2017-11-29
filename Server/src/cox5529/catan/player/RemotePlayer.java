@@ -19,6 +19,7 @@ public class RemotePlayer extends Player {
 	public static final String GAMESTATE = "STATE";
 	public static final String GAMESTATE_BOARD = "BOARD";
 	public static final String GAMESTATE_PLAYERS = "PLAYERS";
+	public static final String GAMESTATE_HAND = "HAND";
 	public static final String START_GAME = "GAME START";
 	public static final String JOIN_GAME = "GAME JOIN";
 	public static final String USERNAME = "USERNAME";
@@ -27,7 +28,13 @@ public class RemotePlayer extends Player {
 	private WebSocket connection;
 
 	public RemotePlayer(WebSocket connection) {
+		super();
 		this.connection = connection;
+		hand.add(Card.Brick);
+		hand.add(Card.Stone);
+		hand.add(Card.Wheat);
+		hand.add(Card.Sheep);
+		hand.add(Card.Wood); // TODO remove
 	}
 
 	public WebSocket getConnection() {
@@ -54,6 +61,7 @@ public class RemotePlayer extends Player {
 		try {
 			send(GAMESTATE + " " + GAMESTATE_BOARD, mapper.writeValueAsString(board));
 			send(GAMESTATE + " " + GAMESTATE_PLAYERS, mapper.writeValueAsString(players));
+			send(GAMESTATE + " " + GAMESTATE_HAND, mapper.writeValueAsString(hand));
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 		}

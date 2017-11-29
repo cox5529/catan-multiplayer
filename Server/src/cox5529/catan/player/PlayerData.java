@@ -9,6 +9,7 @@ public class PlayerData {
 	private int cards;
 	private int devCards;
 	private int team;
+	private String name;
 	private ArrayList<DevelopmentCard> playedDevCards;
 
 	public PlayerData() {
@@ -45,5 +46,13 @@ public class PlayerData {
 
 	public void setPlayedDevCards(ArrayList<DevelopmentCard> playedDevCards) {
 		this.playedDevCards = playedDevCards;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
 	}
 }

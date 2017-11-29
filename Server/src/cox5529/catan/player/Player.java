@@ -5,6 +5,7 @@ import cox5529.catan.Card;
 import cox5529.catan.CatanGame;
 import cox5529.catan.board.CatanBoard;
 import cox5529.catan.devcard.DevelopmentCard;
+import org.java_websocket.WebSocket;
 
 import java.util.ArrayList;
 
@@ -20,6 +21,7 @@ public abstract class Player {
 	public Player() {
 		hand = new ArrayList<>();
 		devCards = new ArrayList<>();
+		playedDevCards = new ArrayList<>();
 		name = "";
 	}
 
@@ -62,9 +64,26 @@ public abstract class Player {
 		this.game = game;
 	}
 
+	public AIPlayer toAIPlayer() {//TODO implement
+		return null;
+	}
+
+	public RemotePlayer toRemotePlayer(WebSocket conn) {
+		RemotePlayer player = new RemotePlayer(conn);
+		player.setTeam(team);
+		player.setGame(game);
+		for (Card card : hand)
+			player.getHand().add(card);
+		for (DevelopmentCard card : playedDevCards)
+			player.getPlayedDevCards().add(card);
+		for (DevelopmentCard card : devCards)
+			player.getDevCards().add(card);
+		return player;
+	}
+
 	@Override
 	public String toString() {
-		if(game != null) {
+		if (game != null) {
 			return String.format("%s %d[%d]", name, game.getId(), team);
 		} else {
 			return name + " (Idle)";
