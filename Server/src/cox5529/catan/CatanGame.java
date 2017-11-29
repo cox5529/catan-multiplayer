@@ -19,7 +19,7 @@ public class CatanGame {
 		board = CatanBoard.generate();
 		players = new ArrayList<>();
 		for (int i = 0; i < 4; i++) {
-			players.add(new AIPlayer(i));
+			players.add(new AIPlayer(i, this));
 		}
 	}
 
