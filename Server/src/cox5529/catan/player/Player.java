@@ -27,6 +27,24 @@ public abstract class Player {
 
 	public abstract void sendGameState(CatanBoard board, ArrayList<Card> hand, ArrayList<DevelopmentCard> devCards, ArrayList<PlayerData> players);
 
+	public abstract int[] moveRobber(CatanBoard board, ArrayList<PlayerData> players);
+
+	public abstract Card getMonopolyResource();
+
+	public void give(Player player, Card resource, int amount) {
+		int count = 0;
+		for (int i = 0; i < hand.size(); i++) {
+			if (hand.get(i) == resource) {
+				count++;
+				player.getHand().add(hand.get(i));
+				hand.remove(i);
+				i--;
+				if (count == amount) break;
+			}
+		}
+		game.broadcastConsoleMessage(name + " has given " + player.getName() + " " + amount + " " + resource + " card" + (amount == 1 ? "." : "s."));
+	}
+
 	public int getTeam() {
 		return team;
 	}

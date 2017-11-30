@@ -15,7 +15,7 @@
 			<div class="row">
 				<div class="col-sm-12 col-lg-8 col-xl-6">
 					<h3>Board</h3>
-					<canvas id='board' width="570" height="600" style='border: 1px solid black;'>
+					<canvas id='board' onclick='receiveInput(event);' width="570" height="600" style='border: 1px solid black;'>
 					</canvas>
 				</div>
 				<div class="col-sm-12 col-lg-4 col-xl-3">
@@ -67,6 +67,7 @@
 	var JOIN_GAME = "GAME JOIN";
 	var USERNAME = "USERNAME";
 	var CONSOLE = "CONSOLE";
+	var ROBBER = "ROBBER";
 	
 	var socket;
 	var state = 0;
@@ -87,10 +88,13 @@
 	var ROBBER_COLOR = "#7f7f7f";
 	var NUMBER_BG_COLOR = "#fff";
 	var ALL_PORT_COLOR = "#bbb";
+	var ROBBER_COLOR = "#aaa";
 	
 	var HEX_HEIGHT = 87;
 	var HEX_WIDTH = 100;
 	var HEX_SIDE = 50;
+	
+	var lastClick = { x: -1, y: -1 };
 	
 	var teams = [
 		{
@@ -128,6 +132,10 @@
 				showMessage(event.data);
 			} else if(expectedMessage == GAMESTATE_HAND) {
 				updateHand(JSON.parse(event.data));
+			} else if(expectedMessage == ROBBER) {
+				placeRobber();
+			} else {
+				console.log(event.data);
 			}
 			
 			if(!setExpectedMessage)
@@ -135,7 +143,7 @@
 		}
 		
 		socket.onopen = function(event) {
-			socket.send(USERNAME + " " + username); //TODO resource icons
+			socket.send(USERNAME + " " + username);
 		}
 	});
 	
@@ -156,6 +164,17 @@
 		$("input[type=submit]", $(this).parents("form")).removeAttr("clicked");
 		$(this).attr("clicked", "true");
 	});
+	
+	function placeRobber() {
+		showMessage("You can now move the robber. The robber may not be placed on the tile that it is already located on.");
+	}
+	
+	function receiveInput(event) {
+		var rect = $("#board")[0].getBoundingClientRect();
+		
+		lastClick.x = event.x - rect.left;
+		lastClick.y = event.y - rect.top;
+	}
 	
 	function updateHand(hand) {
 		var brick = 0;
@@ -207,6 +226,7 @@
 	}
 	
 	function drawBoard() {
+		console.log(board);
 		var canvas = $("#board")[0].getContext('2d');
 		canvas.fillStyle = WATER_COLOR;
 		canvas.fillRect(0, 0, 600, 600);
@@ -216,6 +236,7 @@
 		drawHexes(xOffsetGlobal, yOffsetGlobal, canvas, board.tiles);
 		drawLinks(xOffsetGlobal, yOffsetGlobal, canvas, board.links);
 		drawPorts(xOffsetGlobal, yOffsetGlobal, canvas, board.ports);
+		drawRobber(xOffsetGlobal, yOffsetGlobal, canvas, board.robber);
 	}
 	
 	function drawHexes(xOffsetGlobal, yOffsetGlobal, canvas, tiles) {
@@ -459,5 +480,18 @@
 				canvas.stroke();
 			}
 		}
+	}
+
+	function drawRobber(xOffsetGlobal, yOffsetGlobal, canvas, robber) {
+		var xOffset = robber.column * HEX_WIDTH * 3 / 4;
+		var yOffset = robber.diagonal * HEX_HEIGHT - robber.column * HEX_HEIGHT / 2;
+		var x = xOffset + xOffsetGlobal + HEX_WIDTH / 2;
+		var y = yOffset + yOffsetGlobal + HEX_HEIGHT / 2;
+		
+		canvas.fillStyle = ROBBER_COLOR;
+		canvas.beginPath();
+		canvas.arc(x, y, 20, 0, Math.PI * 2);
+		canvas.closePath();
+		canvas.fill();
 	}
 </script>

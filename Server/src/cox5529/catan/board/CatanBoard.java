@@ -1,6 +1,7 @@
 package cox5529.catan.board;
 
 
+import cox5529.Utility;
 import cox5529.catan.Card;
 
 import java.util.Arrays;
@@ -10,9 +11,15 @@ public class CatanBoard {
 	private CatanTile[][] tiles; // diagonal, column
 	private CatanPort[] ports;
 	private CatanLink[] links;
+	private Robber robber;
 
 	public CatanBoard() {
 		fillArrays();
+		robber = new Robber(0, 0, null);
+	}
+
+	public Robber getRobber() {
+		return robber;
 	}
 
 	public CatanTile[][] getTiles() {
@@ -333,7 +340,7 @@ public class CatanBoard {
 		int edgeLength = 3;
 		for (int i = 0; i < ports.length; i += edgeLength) {
 			int r = (int) (Math.random() * ports.length / edgeLength) * edgeLength;
-			for(int j = 0; j < edgeLength; j++) {
+			for (int j = 0; j < edgeLength; j++) {
 				CatanPort temp = ports[i + j];
 				ports[i + j] = ports[r + j];
 				ports[r + j] = temp;
@@ -341,7 +348,23 @@ public class CatanBoard {
 		}
 	}
 
+	private void placeRobber() {
+		for (int i = 0; i < tiles.length; i++) {
+			for (int j = 0; j < tiles[i].length; j++) {
+				if (tiles[i][j] != null && tiles[i][j].getResource() == Card.None) {
+					moveRobber(i, j);
+					break;
+				}
+			}
+		}
+	}
+
+	public void moveRobber(int diagonal, int column) {
+		robber.setTile(tiles[diagonal][column], diagonal, column);
+	}
+
 	public static CatanBoard generate() {
+		Utility.log("Generating board");
 		CatanBoard board = new CatanBoard();
 		board.shuffleArrays();
 		int[] rolls = new int[18];
@@ -382,6 +405,8 @@ public class CatanBoard {
 		}
 		board.fillSecondaryArrays();
 		board.linkElements();
+		board.placeRobber();
+		Utility.log("Generated board");
 		return board;
 	}
 

@@ -11,12 +11,22 @@ public class CatanTile {
 	private int exteriorStart;
 	private int exteriorEnd;
 	private CatanSpace[] spaces;
+	private boolean robber;
 
 	public CatanTile(Card resource, int exteriorStart, int exteriorEnd) {
 		this.resource = resource;
 		this.exteriorStart = exteriorStart;
 		this.exteriorEnd = exteriorEnd;
 		spaces = new CatanSpace[6];
+		robber = false;
+	}
+
+	public boolean hasRobber() {
+		return robber;
+	}
+
+	public void setRobber(boolean robber) {
+		this.robber = robber;
 	}
 
 	public int getExteriorStart() {

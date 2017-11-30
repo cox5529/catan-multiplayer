@@ -20,4 +20,14 @@ public class AIPlayer extends Player {
 	public void sendGameState(CatanBoard board, ArrayList<Card> hand, ArrayList<DevelopmentCard> devCards, ArrayList<PlayerData> players) {
 
 	}
+
+	@Override
+	public int[] moveRobber(CatanBoard board, ArrayList<PlayerData> players) {
+		return new int[2];
+	}
+
+	@Override
+	public Card getMonopolyResource() {
+		return null;
+	}
 }

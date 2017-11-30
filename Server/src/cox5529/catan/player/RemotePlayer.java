@@ -11,6 +11,7 @@ import cox5529.catan.devcard.DevelopmentCard;
 import org.java_websocket.WebSocket;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -24,17 +25,16 @@ public class RemotePlayer extends Player {
 	public static final String JOIN_GAME = "GAME JOIN";
 	public static final String USERNAME = "USERNAME";
 	public static final String CONSOLE = "CONSOLE";
+	public static final String ROBBER = "ROBBER";
+	public static final String RESPONSE = "RESPONSE";
 
 	private WebSocket connection;
+	private Queue<String> response;
 
 	public RemotePlayer(WebSocket connection) {
 		super();
 		this.connection = connection;
-		hand.add(Card.Brick);
-		hand.add(Card.Stone);
-		hand.add(Card.Wheat);
-		hand.add(Card.Sheep);
-		hand.add(Card.Wood); // TODO remove
+		response = new LinkedList<>();
 	}
 
 	public WebSocket getConnection() {
@@ -47,11 +47,14 @@ public class RemotePlayer extends Player {
 			CatanGame game = new CatanGame();
 			server.addGame(key, game);
 			game.addPlayer(this);
+			System.out.println(Arrays.toString(moveRobber(game.getBoard(), null))); //TODO remove
 		} else if (message.startsWith(JOIN_GAME)) {
 			String key = message.substring(JOIN_GAME.length() + 1);
 			server.getGame(key).addPlayer(this);
 		} else if (message.startsWith(USERNAME)) {
 			this.name = message.substring(USERNAME.length() + 1);
+		} else if (message.startsWith(RESPONSE)) {
+			this.response.add(message.substring(RESPONSE.length() + 1));
 		}
 	}
 
@@ -67,6 +70,23 @@ public class RemotePlayer extends Player {
 		}
 	}
 
+	@Override
+	public int[] moveRobber(CatanBoard board, ArrayList<PlayerData> players) {
+		send(ROBBER, "");
+		waitForResponse();
+		String response = this.response.poll();
+		String[] coords = response.split(" ");
+		int[] re = new int[2];
+		re[0] = Integer.parseInt(coords[0]);
+		re[1] = Integer.parseInt(coords[1]);
+		return re;
+	}
+
+	@Override
+	public Card getMonopolyResource() {
+		return null;
+	}
+
 	private void send(String protocol, String message) {
 		connection.send(protocol);
 		connection.send(message);
@@ -75,6 +95,15 @@ public class RemotePlayer extends Player {
 
 	public void sendConsoleMessage(String message) {
 		send(CONSOLE, message);
+	}
+
+	private void waitForResponse() {
+		while (response.size() == 0) {
+			try {
+				Thread.sleep(1);
+			} catch (Exception e) {
+			}
+		}
 	}
 
 	@Override

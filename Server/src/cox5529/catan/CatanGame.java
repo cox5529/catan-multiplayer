@@ -2,6 +2,7 @@ package cox5529.catan;
 
 
 import cox5529.catan.board.CatanBoard;
+import cox5529.catan.board.Robber;
 import cox5529.catan.player.AIPlayer;
 import cox5529.catan.player.Player;
 import cox5529.catan.player.PlayerData;
@@ -60,6 +61,19 @@ public class CatanGame {
 			data.add(pdata);
 		}
 		return data;
+	}
+
+	public ArrayList<Player> getPlayers() {
+		return players;
+	}
+
+	public void moveRobber(Player player) {
+		int[] robberPos = player.moveRobber(board, buildPlayerData());
+		Robber robber = board.getRobber();
+		while(robberPos[0] == robber.getDiagonal() && robberPos[1] == robber.getColumn()) {
+			robberPos = player.moveRobber(board, buildPlayerData());
+		}
+		board.moveRobber(robberPos[0], robberPos[1]);
 	}
 
 	public void broadcastConsoleMessage(String message) {
