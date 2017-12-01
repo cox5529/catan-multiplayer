@@ -78,6 +78,7 @@
 								<td>Years of plenty: <span id='yop-amt'>0</span></td>
 								<td>Road buildings: <span id='rb-amt'>0</span></td>
 								<td>Knights: <span id='knight-amt'>0</span></td>
+								<td>Victory points: <span id='vp-amt'>0</span></td>
 							</tr>
 						</tbody>
 					</table>
@@ -104,6 +105,7 @@
 	var GAMESTATE_BOARD = "STATE BOARD";
 	var GAMESTATE_PLAYERS = "STATE PLAYERS";
 	var GAMESTATE_HAND = "STATE HAND";
+	var GAMESTATE_DEV_CARDS = "STATE DEV CARDS";
 	var START_GAME = "GAME START";
 	var JOIN_GAME = "GAME JOIN";
 	var USERNAME = "USERNAME";
@@ -111,6 +113,13 @@
 	var ROBBER = "ROBBER";
 	var RESPONSE = "RESPONSE"
 	var TURN = "TURN";
+	var SETTLEMENT = "SETTLEMENT";
+	var CITY = "CITY";
+	var DEV_CARD = "DEV CARD";
+	var KNIGHT = "KNIGHT";
+	var MONOPOLY = "MONOPOLY";
+	var YOP = "YOP";
+	var RB = "RB";
 	
 	var socket;
 	var state = 0;
@@ -118,6 +127,7 @@
 	
 	var expectedMessage = NONE;
 	var board = {};
+	var devCards = [];
 	
 	var SHEEP_COLOR = "#a8d242";
 	var WHEAT_COLOR = "#ffd300";
@@ -185,6 +195,9 @@
 				placeRobber(JSON.parse(event.data));
 			} else if(expectedMessage == TURN) {
 				doTurn();
+			} else if(expectedMessage == GAMESTATE_DEV_CARDS) {
+				devCards = JSON.parse(event.data);
+				updateDevCards(devCards);
 			} else {
 				console.log(event.data);
 			}
@@ -197,7 +210,7 @@
 			socket.send(USERNAME + " " + username);
 		}
 	
-		$("#form").on('submit', function(e) {
+		var onsubmit = function(e) {
 			e.preventDefault();
 			var data = $("#form :input").serializeArray();
 			var val = {name: "submit", value: $("input[type=submit][clicked=true]").val()};
@@ -209,18 +222,16 @@
 				socket.send(JOIN_GAME + " " + data[0].value);
 			}
 			$("#form").html("");
-		});
+		};
+		
+		updateForm(null, onsubmit);
 		
 		xOffsetGlobal = $("#board")[0].width / 2 - 4 * HEX_WIDTH / 2;
 		yOffsetGlobal = $("#board")[0].height / 2 - 5 * HEX_HEIGHT / 2;
 	});
 	
-	$("form input[type=submit]").click(function() {
-		$("input[type=submit]", $(this).parents("form")).removeAttr("clicked");
-		$(this).attr("clicked", "true");
-	});
-	
 	function doTurn() {
+		var devCards = countDevCards();
 		var html = "";
 		html += "<table class='table'><thead><tr><th>Action</th><th>Requirements</th></tr></thead><tbody>";
 		html += "<tr>";
@@ -240,16 +251,83 @@
 		html += "	<td><img src='images/stone.png' class='resource-icon'/><img src='images/wheat.png' class='resource-icon'/><img src='images/sheep.png' class='resource-icon'/></td>";
 		html += "</tr>";
 		html += "<tr><td colspan='2'>";
-		html += "	<input type='submit' class='btn btn-primary' name='action' value='Play Knight' /> ";
-		html += "	<input type='submit' class='btn btn-primary' name='action' value='Play Monopoly' /> ";
-		html += "	<input type='submit' class='btn btn-primary' name='action' value='Play Year of Plenty' /> ";
-		html += "	<input type='submit' class='btn btn-primary' name='action' value='Play Road Building' /> ";
+		if(devCards.knight > 0)
+			html += "	<input type='submit' class='btn btn-primary' name='action' value='Play Knight' /> ";
+		if(devCards.monopoly > 0)
+			html += "	<input type='submit' class='btn btn-primary' name='action' value='Play Monopoly' /> ";
+		if(devCards.yop > 0)
+			html += "	<input type='submit' class='btn btn-primary' name='action' value='Play Year of Plenty' /> ";
+		if(devCards.rb > 0)
+			html += "	<input type='submit' class='btn btn-primary' name='action' value='Play Road Building' /> ";
 		html += "</td></tr>";
 		html += "<tr><td colspan='2'>";
 		html += "	<input type='submit' class='btn btn-primary' name='action' value='End Turn' /> ";
 		html += "</td></tr>";
 		html += "</tbody></table>";
-		$("#form").html(html);
+		
+		var onsubmit = function(e) {
+			e.preventDefault();
+			var val = $("input[type=submit][clicked=true]").val();
+			if(val == "Build Settlement") {
+				
+			} else if(val == "Build City") {
+				
+			} else if(val == "Build Road") {
+				
+			} else if(val == "Buy Development Card") {
+				socket.send(RESPONSE + " " + DEV_CARD);
+			} else if(val == "Play Knight") {
+				socket.send(RESPONSE + " " + KNIGHT);
+			} else if(val == "Play Monopoly") {
+				doMonopoly();
+			} else if(val == "Play Year of Plenty") {
+				
+			} else if(val == "Play Road Building") {
+				
+			} else if(val == "End Turn") {
+				socket.send(RESPONSE + " " + TURN);
+			}
+		};
+		
+		updateForm(html, onsubmit);
+	}
+	
+	function doMonopoly() {
+		var html = "<p>Which resource would you like to monopolize?</p>";
+		html += "<input type='image' src='images/wood.png' value='wood' class='resource-icon-lg' /> ";
+		html += "<input type='image' src='images/sheep.png' value='sheep' class='resource-icon-lg' /> ";
+		html += "<input type='image' src='images/wheat.png' value='wheat' class='resource-icon-lg' /> ";
+		html += "<input type='image' src='images/stone.png' value='stone' class='resource-icon-lg' /> ";
+		html += "<input type='image' src='images/brick.png' value='brick' class='resource-icon-lg' /> ";
+		html += "<br /><input type='submit' class='btn btn-primary' value='Cancel' />";
+		var onsubmit = function(e) {
+			e.preventDefault();
+			var val = $("input[type=image][clicked=true]").val();
+			var cancel = ($("input[type=submit][clicked=true]").val() != null);
+			
+			if(!cancel) {
+				socket.send(RESPONSE + " " + MONOPOLY + " " + val);
+			}
+			doTurn();
+		};
+		
+		updateForm(html, onsubmit);
+	}
+	
+	function updateForm(html, onsubmit) {
+		if(html != null) {
+			$("#form").html(html);
+		}
+		$("#form input[type=submit]").click(function() {
+			$("input[type=submit]", $(this).parents("form")).removeAttr("clicked");
+			$(this).attr("clicked", "true");
+		});
+		$("#form input[type=image]").click(function() {
+			$("input[type=image]", $(this).parents("form")).removeAttr("clicked");
+			$(this).attr("clicked", "true");
+		});
+		$("#form").unbind('submit');
+		$("#form").on('submit', onsubmit);
 	}
 	
 	function placeRobber(board) {
@@ -261,6 +339,7 @@
 				showMessage("You must place the robber on a tile that is not already located on.");
 			} else {
 				socket.send(RESPONSE + " " + coordinate.diagonal + " " + coordinate.column);
+				onInput = null;
 			}
 		};
 	}
@@ -311,6 +390,40 @@
 		return {"column": x, "diagonal": diag};
 	}
 
+	function countDevCards() {
+		var monopoly = 0;
+		var yop = 0;
+		var rb = 0;
+		var knight = 0;
+		var vp = 0;
+		
+		for(var i = 0; i < devCards.length; i++) {
+			var card = devCards[i].name;
+			if(card == "Monopoly") {
+				monopoly++;
+			} else if(card == "Knight") {
+				knight++;
+			} else if(card == "Year of plenty") {
+				yop++;
+			} else if(card == "Road building") {
+				rb++;
+			} else {
+				vp++;
+			}
+		}
+		return {monopoly: monopoly, yop: yop, rb: rb, knight: knight, vp: vp};
+	}
+	
+	function updateDevCards() {
+		var cards = countDevCards();
+		
+		$("#monopoly-amt").html(cards.monopoly);
+		$("#yop-amt").html(cards.yop);
+		$("#rb-amt").html(cards.rb);
+		$("#knight-amt").html(cards.knight);
+		$("#vp-amt").html(cards.vp);
+	}
+	
 	function updateHand(hand) {
 		var brick = 0;
 		var stone = 0;
@@ -353,7 +466,7 @@
 	}
 	
 	function showMessage(message) {
-		$("#console").append("<div>"+message+"</div>");
+		$("#console").append("<div>"+message+"</div><br / >");
 		$("#console").stop().animate({scrollTop: $("#console")[0].scrollHeight}, 1000);
 		console.log(message);
 	}

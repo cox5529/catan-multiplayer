@@ -6,6 +6,7 @@ import cox5529.catan.player.Player;
 public abstract class DevelopmentCard {
 
 	private String name;
+	private boolean gainedThisTurn;
 
 	public DevelopmentCard(String name) {
 		this.name = name;
@@ -15,10 +16,12 @@ public abstract class DevelopmentCard {
 		return name;
 	}
 
-	public void play(CatanGame game, Player player) {
+	public void play(CatanGame game, Player player, String argument) {
 		game.broadcastConsoleMessage(player.getName() + " has just played a " + name + " development card!");
-		doAction(game, player);
+		doAction(game, player, argument);
 	}
 
-	public abstract void doAction(CatanGame game, Player player);
+
+
+	public abstract void doAction(CatanGame game, Player player, String argument);
 }

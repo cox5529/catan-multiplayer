@@ -3,10 +3,10 @@ package cox5529.catan.devcard;
 import cox5529.catan.CatanGame;
 import cox5529.catan.player.Player;
 
-public class VictoryPoint extends DevelopmentCard {
+public class RoadBuilding extends DevelopmentCard {
 
-	public VictoryPoint(){
-		super("Victory Point");
+	public RoadBuilding(){
+		super("Road Building");
 	}
 
 	@Override

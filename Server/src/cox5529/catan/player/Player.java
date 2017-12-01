@@ -5,6 +5,8 @@ import cox5529.catan.Card;
 import cox5529.catan.CatanGame;
 import cox5529.catan.board.CatanBoard;
 import cox5529.catan.devcard.DevelopmentCard;
+import cox5529.catan.devcard.Knight;
+import cox5529.catan.devcard.Monopoly;
 import org.java_websocket.WebSocket;
 
 import java.util.ArrayList;
@@ -29,7 +31,7 @@ public abstract class Player {
 
 	public abstract int[] moveRobber(CatanBoard board, ArrayList<PlayerData> players);
 
-	public abstract Card getMonopolyResource();
+	public abstract void doTurn(CatanBoard board, ArrayList<PlayerData> players);
 
 	public void give(Player player, Card resource, int amount) {
 		int count = 0;
@@ -42,8 +44,27 @@ public abstract class Player {
 				if (count == amount) break;
 			}
 		}
-		game.broadcastConsoleMessage(name + " has given " + player.getName() + " " + amount + " " + resource + " card" + (amount == 1 ? "." : "s."));
+		game.broadcastConsoleMessage(name + " has given " + player.getName() + " " + count + " " + resource + " card" + (amount == 1 ? "." : "s."));
 	}
+
+	public void playDevelopmentCard(DevelopmentCard card, String argument) {
+		boolean valid = false;
+		for (DevelopmentCard c : devCards) {
+			if (c.equals(card)) {
+				valid = true;
+				devCards.remove(c);
+				playedDevCards.add(c);
+				break;
+			}
+		}
+		if (valid) {
+			card.play(game, this, argument);
+			game.broadcastGameState();
+		} else if (this instanceof RemotePlayer) {
+			((RemotePlayer) this).sendConsoleMessage("You do not have a " + card.getName() + " card to play.");
+		}
+	}
+
 
 	public int getTeam() {
 		return team;
@@ -98,6 +119,9 @@ public abstract class Player {
 			player.getPlayedDevCards().add(card);
 		for (DevelopmentCard card : devCards)
 			player.getDevCards().add(card);
+		player.getDevCards().add(new Knight());
+		player.getDevCards().add(new Monopoly());
+		player.getHand().add(Card.Brick);
 		return player;
 	}
 

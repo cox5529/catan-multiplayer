@@ -27,7 +27,7 @@ public class AIPlayer extends Player {
 	}
 
 	@Override
-	public Card getMonopolyResource() {
-		return null;
+	public void doTurn(CatanBoard board, ArrayList<PlayerData> players) {
+
 	}
 }

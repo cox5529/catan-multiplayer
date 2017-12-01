@@ -8,6 +8,8 @@ import cox5529.catan.CatanGame;
 import cox5529.catan.CatanServer;
 import cox5529.catan.board.CatanBoard;
 import cox5529.catan.devcard.DevelopmentCard;
+import cox5529.catan.devcard.Knight;
+import cox5529.catan.devcard.Monopoly;
 import org.java_websocket.WebSocket;
 
 import java.util.ArrayList;
@@ -27,6 +29,15 @@ public class RemotePlayer extends Player {
 	public static final String CONSOLE = "CONSOLE";
 	public static final String ROBBER = "ROBBER";
 	public static final String RESPONSE = "RESPONSE";
+	public static final String TURN = "TURN";
+	public static final String GAMESTATE_DEV_CARDS = "DEV CARDS";
+	public static final String SETTLEMENT = "SETTLEMENT";
+	public static final String CITY = "CITY";
+	public static final String DEV_CARD = "DEV CARD";
+	public static final String KNIGHT = "KNIGHT";
+	public static final String MONOPOLY = "MONOPOLY";
+	public static final String YOP = "YOP";
+	public static final String RB = "RB";
 
 	private WebSocket connection;
 	private final Queue<String> response;
@@ -64,6 +75,7 @@ public class RemotePlayer extends Player {
 			send(GAMESTATE + " " + GAMESTATE_BOARD, mapper.writeValueAsString(board));
 			send(GAMESTATE + " " + GAMESTATE_PLAYERS, mapper.writeValueAsString(players));
 			send(GAMESTATE + " " + GAMESTATE_HAND, mapper.writeValueAsString(hand));
+			send(GAMESTATE + " " + GAMESTATE_DEV_CARDS, mapper.writeValueAsString(devCards));
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 		}
@@ -84,11 +96,6 @@ public class RemotePlayer extends Player {
 		re[0] = Integer.parseInt(coords[0]);
 		re[1] = Integer.parseInt(coords[1]);
 		return re;
-	}
-
-	@Override
-	public Card getMonopolyResource() {
-		return null;
 	}
 
 	private void send(String protocol, String message) {
@@ -113,7 +120,52 @@ public class RemotePlayer extends Player {
 			}
 			synchronized (response) {
 				size = response.size();
-				//System.out.println(size);
+			}
+		}
+	}
+
+	@Override
+	public void doTurn(CatanBoard board, ArrayList<PlayerData> players) {
+		send(TURN, "");
+		while (true) {
+			waitForResponse();
+			String response = this.response.poll();
+			if (response.equals(TURN)) {
+				break;
+			} else if (response.equals(DEV_CARD)) {
+				game.drawDevCard(this);
+			} else if (response.equals(KNIGHT)) {
+				boolean valid = false;
+				DevelopmentCard c = null;
+				for (DevelopmentCard card : devCards) {
+					if (card instanceof Knight) {
+						valid = true;
+						c = card;
+						break;
+					}
+				}
+				if (valid) {
+					playDevelopmentCard(c, null);
+				} else {
+					sendConsoleMessage("You do not have a knight card to play.");
+				}
+			} else if(response.startsWith(MONOPOLY)) {
+				boolean valid = false;
+				DevelopmentCard c = null;
+				for (DevelopmentCard card : devCards) {
+					if (card instanceof Monopoly) {
+						valid = true;
+						c = card;
+						break;
+					}
+				}
+				if (valid) {
+					playDevelopmentCard(c, response.substring(MONOPOLY.length() + 1));
+				} else {
+					sendConsoleMessage("You do not have a monopoly card to play.");
+				}
+			} else {
+				Utility.log(response);
 			}
 		}
 	}

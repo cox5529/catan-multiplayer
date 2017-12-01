@@ -17,3 +17,8 @@
 .resource-icon {
 	width: 30px;
 }
+
+.resource-icon-lg {
+	width: 60px;
+	cursor: pointer;
+}

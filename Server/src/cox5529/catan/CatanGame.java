@@ -3,6 +3,7 @@ package cox5529.catan;
 
 import cox5529.catan.board.CatanBoard;
 import cox5529.catan.board.Robber;
+import cox5529.catan.devcard.*;
 import cox5529.catan.player.AIPlayer;
 import cox5529.catan.player.Player;
 import cox5529.catan.player.PlayerData;
@@ -10,12 +11,14 @@ import cox5529.catan.player.RemotePlayer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 
 public class CatanGame implements Runnable {
 
 	private CatanBoard board;
 	private int id;
 	private ArrayList<Player> players;
+	private ArrayList<DevelopmentCard> devCardDeck;
 
 	public CatanGame() {
 		board = CatanBoard.generate();
@@ -23,6 +26,23 @@ public class CatanGame implements Runnable {
 		for (int i = 0; i < 4; i++) {
 			players.add(new AIPlayer(i, this));
 		}
+		devCardDeck = new ArrayList<>();
+		for (int i = 0; i < 14; i++) {
+			devCardDeck.add(new Knight());
+		}
+		for (int i = 0; i < 5; i++) {
+			devCardDeck.add(new VictoryPoint());
+		}
+		for (int i = 0; i < 2; i++) {
+			devCardDeck.add(new Monopoly());
+		}
+		for (int i = 0; i < 2; i++) {
+			devCardDeck.add(new YearOfPlenty());
+		}
+		for (int i = 0; i < 2; i++) {
+			devCardDeck.add(new RoadBuilding());
+		}
+		Collections.shuffle(devCardDeck);
 	}
 
 	public void addPlayer(RemotePlayer player) {
@@ -39,13 +59,23 @@ public class CatanGame implements Runnable {
 		broadcastConsoleMessage(player.getName() + " has joined the game");
 	}
 
+	public void drawDevCard(Player player) {
+		DevelopmentCard card = devCardDeck.remove(0);
+		broadcastConsoleMessage(player.getName() + " has just bought a development card!");
+		if (player instanceof RemotePlayer) {
+			((RemotePlayer) player).sendConsoleMessage("You have drawn a " + card.getName() + " card.");
+		}
+		player.getDevCards().add(card);
+		broadcastGameState();
+	}
+
 	public void removePlayer(Player player, String reason) {
 		players.remove(player);
 		broadcastGameState();
 		broadcastConsoleMessage(player.getName() + " has left the game. Reason: " + reason);
 	}
 
-	private void broadcastGameState() {
+	public void broadcastGameState() {
 		for (Player p : players)
 			p.sendGameState(board, p.getHand(), p.getDevCards(), buildPlayerData());
 	}
@@ -76,6 +106,7 @@ public class CatanGame implements Runnable {
 		}
 		board.moveRobber(robberPos[0], robberPos[1]);
 		broadcastGameState();
+		broadcastConsoleMessage(player.getName() + " has moved the robber!");
 	}
 
 	public void broadcastConsoleMessage(String message) {
@@ -98,6 +129,11 @@ public class CatanGame implements Runnable {
 
 	@Override
 	public void run() {
-		moveRobber(players.get(0));
+		while (true) {
+			for (Player player : players) {
+				broadcastGameState();
+				player.doTurn(board, buildPlayerData());
+			}
+		}
 	}
 }
