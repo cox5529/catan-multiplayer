@@ -12,7 +12,7 @@ public class AIPlayer extends Player {
 	public AIPlayer(int team, CatanGame game) {
 		super();
 		this.team = team;
-		this.name = "AI Player";
+		this.name = "AI Player " + team;
 		this.game = game;
 	}
 

@@ -86,10 +86,12 @@ public abstract class Player {
 		return null;
 	}
 
-	public RemotePlayer toRemotePlayer(WebSocket conn) {
-		RemotePlayer player = new RemotePlayer(conn);
+	public RemotePlayer toRemotePlayer(RemotePlayer player) {
 		player.setTeam(team);
 		player.setGame(game);
+		player.getHand().clear();
+		player.getDevCards().clear();
+		player.getPlayedDevCards().clear();
 		for (Card card : hand)
 			player.getHand().add(card);
 		for (DevelopmentCard card : playedDevCards)

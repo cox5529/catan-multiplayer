@@ -29,7 +29,7 @@ public class RemotePlayer extends Player {
 	public static final String RESPONSE = "RESPONSE";
 
 	private WebSocket connection;
-	private Queue<String> response;
+	private final Queue<String> response;
 
 	public RemotePlayer(WebSocket connection) {
 		super();
@@ -44,17 +44,16 @@ public class RemotePlayer extends Player {
 	public void onMessage(CatanServer server, String message) {
 		if (message.startsWith(START_GAME)) {
 			String key = message.substring(START_GAME.length() + 1);
-			CatanGame game = new CatanGame();
-			server.addGame(key, game);
-			game.addPlayer(this);
-			System.out.println(Arrays.toString(moveRobber(game.getBoard(), null))); //TODO remove
+			server.startGame(key, this);
 		} else if (message.startsWith(JOIN_GAME)) {
 			String key = message.substring(JOIN_GAME.length() + 1);
 			server.getGame(key).addPlayer(this);
 		} else if (message.startsWith(USERNAME)) {
 			this.name = message.substring(USERNAME.length() + 1);
 		} else if (message.startsWith(RESPONSE)) {
-			this.response.add(message.substring(RESPONSE.length() + 1));
+			synchronized (response) {
+				this.response.add(message.substring(RESPONSE.length() + 1));
+			}
 		}
 	}
 
@@ -72,7 +71,12 @@ public class RemotePlayer extends Player {
 
 	@Override
 	public int[] moveRobber(CatanBoard board, ArrayList<PlayerData> players) {
-		send(ROBBER, "");
+		ObjectMapper mapper = new ObjectMapper();
+		try {
+			send(ROBBER, mapper.writeValueAsString(board));
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+		}
 		waitForResponse();
 		String response = this.response.poll();
 		String[] coords = response.split(" ");
@@ -98,10 +102,18 @@ public class RemotePlayer extends Player {
 	}
 
 	private void waitForResponse() {
-		while (response.size() == 0) {
+		int size = 0;
+		synchronized (response) {
+			size = response.size();
+		}
+		while (size == 0) {
 			try {
 				Thread.sleep(1);
 			} catch (Exception e) {
+			}
+			synchronized (response) {
+				size = response.size();
+				//System.out.println(size);
 			}
 		}
 	}

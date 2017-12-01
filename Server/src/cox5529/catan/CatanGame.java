@@ -9,8 +9,9 @@ import cox5529.catan.player.PlayerData;
 import cox5529.catan.player.RemotePlayer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
-public class CatanGame {
+public class CatanGame implements Runnable {
 
 	private CatanBoard board;
 	private int id;
@@ -28,7 +29,7 @@ public class CatanGame {
 		player.setGame(this);
 		for (int i = 0; i < players.size(); i++) {
 			if (players.get(i) instanceof AIPlayer) {
-				RemotePlayer remotePlayer = players.get(i).toRemotePlayer(player.getConnection());
+				RemotePlayer remotePlayer = players.get(i).toRemotePlayer(player);
 				remotePlayer.setName(player.getName());
 				players.set(i, remotePlayer);
 				break;
@@ -70,10 +71,11 @@ public class CatanGame {
 	public void moveRobber(Player player) {
 		int[] robberPos = player.moveRobber(board, buildPlayerData());
 		Robber robber = board.getRobber();
-		while(robberPos[0] == robber.getDiagonal() && robberPos[1] == robber.getColumn()) {
+		while (robberPos[0] == robber.getDiagonal() && robberPos[1] == robber.getColumn()) {
 			robberPos = player.moveRobber(board, buildPlayerData());
 		}
 		board.moveRobber(robberPos[0], robberPos[1]);
+		broadcastGameState();
 	}
 
 	public void broadcastConsoleMessage(String message) {
@@ -92,5 +94,10 @@ public class CatanGame {
 
 	public void setId(int id) {
 		this.id = id;
+	}
+
+	@Override
+	public void run() {
+		moveRobber(players.get(0));
 	}
 }

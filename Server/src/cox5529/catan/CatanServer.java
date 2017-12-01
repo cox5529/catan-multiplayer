@@ -9,7 +9,6 @@ import org.java_websocket.server.WebSocketServer;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 
 public class CatanServer extends WebSocketServer {
@@ -18,11 +17,13 @@ public class CatanServer extends WebSocketServer {
 
 	private HashMap<WebSocket, RemotePlayer> players;
 	private HashMap<String, CatanGame> games;
+	private ArrayList<Thread> threads;
 
 	public CatanServer(int port) throws UnknownHostException {
 		super(new InetSocketAddress(port));
 		players = new HashMap<>();
 		games = new HashMap<>();
+		threads = new ArrayList<>();
 		nextGameID = 0;
 	}
 
@@ -60,10 +61,15 @@ public class CatanServer extends WebSocketServer {
 
 	}
 
-	public void addGame(String name, CatanGame game) {
+	public void startGame(String key, RemotePlayer creator) {
+		CatanGame game = new CatanGame();
 		game.setId(nextGameID);
 		nextGameID++;
-		games.put(name, game);
+		games.put(key, game);
+		game.addPlayer(creator);
+		Thread t = new Thread(game);
+		threads.add(t);
+		t.start();
 	}
 
 	public CatanGame getGame(String name) {

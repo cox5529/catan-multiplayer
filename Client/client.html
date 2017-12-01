@@ -68,6 +68,7 @@
 	var USERNAME = "USERNAME";
 	var CONSOLE = "CONSOLE";
 	var ROBBER = "ROBBER";
+	var RESPONSE = "RESPONSE"
 	
 	var socket;
 	var state = 0;
@@ -90,11 +91,17 @@
 	var ALL_PORT_COLOR = "#bbb";
 	var ROBBER_COLOR = "#aaa";
 	
+	var xOffsetGlobal = 0;
+	var yOffsetGlobal = 0;
+	
 	var HEX_HEIGHT = 87;
 	var HEX_WIDTH = 100;
 	var HEX_SIDE = 50;
 	
 	var lastClick = { x: -1, y: -1 };
+	
+	var onInput = null;
+	var inputArg = null;
 	
 	var teams = [
 		{
@@ -133,7 +140,7 @@
 			} else if(expectedMessage == GAMESTATE_HAND) {
 				updateHand(JSON.parse(event.data));
 			} else if(expectedMessage == ROBBER) {
-				placeRobber();
+				placeRobber(JSON.parse(event.data));
 			} else {
 				console.log(event.data);
 			}
@@ -145,6 +152,9 @@
 		socket.onopen = function(event) {
 			socket.send(USERNAME + " " + username);
 		}
+		
+		xOffsetGlobal = $("#board")[0].width / 2 - 4 * HEX_WIDTH / 2;
+		yOffsetGlobal = $("#board")[0].height / 2 - 5 * HEX_HEIGHT / 2;
 	});
 	
 	$("#pregame").on('submit', function(e) {
@@ -165,8 +175,17 @@
 		$(this).attr("clicked", "true");
 	});
 	
-	function placeRobber() {
+	function placeRobber(board) {
 		showMessage("You can now move the robber. The robber may not be placed on the tile that it is already located on.");
+		inputArg = board;
+		onInput = function(coordinate) {
+			var board = inputArg;
+			if(coordinate.diagonal == board.robber.diagonal && coordinate.column == board.robber.column) {
+				showMessage("You must place the robber on a tile that is not already located on.");
+			} else {
+				socket.send(RESPONSE + " " + coordinate.diagonal + " " + coordinate.column);
+			}
+		};
 	}
 	
 	function receiveInput(event) {
@@ -174,8 +193,47 @@
 		
 		lastClick.x = event.x - rect.left;
 		lastClick.y = event.y - rect.top;
+		
+		var coordinate = calculateHexClicked(lastClick.x, lastClick.y);
+		if(onInput != null) {
+			onInput(coordinate);
+		}
 	}
 	
+	function calculateHexClicked(x, y) {
+		x -= xOffsetGlobal;
+		y -= yOffsetGlobal;
+		x *= 4 / 3 / HEX_WIDTH;
+		
+		var row = 0;
+		while(y > 0) {
+			y -= HEX_HEIGHT;
+			row++;
+		}
+		row--;
+		y += HEX_HEIGHT;
+		var xMod = x % 1;
+		var eq1 = 2.0 * HEX_HEIGHT / HEX_WIDTH * xMod * HEX_WIDTH;
+		var eq2 = -2.0 * HEX_HEIGHT / HEX_WIDTH * xMod * HEX_WIDTH + HEX_HEIGHT;
+		if(xMod >= 0.25) {
+			
+		} else if(eq1 < y && y < eq2) {
+			if(xMod < 0.25)
+				x -= 1;
+		}
+		x = Math.trunc(x);
+		
+		if(x % 2 == 1) {
+			if(y > HEX_HEIGHT / 2) {
+				row += 0.5;
+			} else {
+				row -= 0.5;
+			}
+		}
+		var diag = row + x / 2;
+		return {"column": x, "diagonal": diag};
+	}
+
 	function updateHand(hand) {
 		var brick = 0;
 		var stone = 0;
@@ -223,6 +281,7 @@
 	function showMessage(message) {
 		$("#console").append("<div>"+message+"</div>");
 		$("#console").stop().animate({scrollTop: $("#console")[0].scrollHeight}, 1000);
+		console.log(message);
 	}
 	
 	function drawBoard() {
@@ -230,16 +289,14 @@
 		var canvas = $("#board")[0].getContext('2d');
 		canvas.fillStyle = WATER_COLOR;
 		canvas.fillRect(0, 0, 600, 600);
-		var xOffsetGlobal = $("#board")[0].width / 2 - 4 * HEX_WIDTH / 2;
-		var yOffsetGlobal = $("#board")[0].height / 2 - 5 * HEX_HEIGHT / 2;
 	
-		drawHexes(xOffsetGlobal, yOffsetGlobal, canvas, board.tiles);
-		drawLinks(xOffsetGlobal, yOffsetGlobal, canvas, board.links);
-		drawPorts(xOffsetGlobal, yOffsetGlobal, canvas, board.ports);
-		drawRobber(xOffsetGlobal, yOffsetGlobal, canvas, board.robber);
+		drawHexes(canvas, board.tiles);
+		drawLinks(canvas, board.links);
+		drawPorts(canvas, board.ports);
+		drawRobber(canvas, board.robber);
 	}
 	
-	function drawHexes(xOffsetGlobal, yOffsetGlobal, canvas, tiles) {
+	function drawHexes(canvas, tiles) {
 		for(var i = 0; i < tiles.length; i++) {
 			for(var j = 0; j < tiles[i].length; j++) {
 				if(tiles[i][j] != null) {
@@ -302,7 +359,7 @@
 					canvas.closePath();
 					canvas.stroke();
 					
-					drawSpaces(xOffsetGlobal, yOffsetGlobal, canvas, tiles[i][j], j, i);
+					drawSpaces(canvas, tiles[i][j], j, i);
 					
 					if(tiles[i][j].resource != "None") {
 						var horizontalOffset = xOffset + xOffsetGlobal + HEX_WIDTH / 2;
@@ -328,7 +385,7 @@
 		}
 	}
 	
-	function drawSpaces(xOffsetGlobal, yOffsetGlobal, canvas, tile, column, diagonal) {
+	function drawSpaces(canvas, tile, column, diagonal) {
 		var spaces = tile.spaces;
 		for(var i = 0; i < spaces.length; i++) {
 			var space = spaces[i];
@@ -363,7 +420,7 @@
 		}
 	}
 	
-	function drawLinks(xOffsetGlobal, yOffsetGlobal, canvas, links) {
+	function drawLinks(canvas, links) {
 		for(var i = 0; i < links.length; i++) {
 			var x = [];
 			var y = [];
@@ -396,7 +453,7 @@
 		}
 	}
 
-	function drawPorts(xOffsetGlobal, yOffsetGlobal, canvas, ports) {
+	function drawPorts(canvas, ports) {
 		for(var i = 0; i < ports.length; i++) {
 			var port = ports[i];
 			
@@ -482,7 +539,7 @@
 		}
 	}
 
-	function drawRobber(xOffsetGlobal, yOffsetGlobal, canvas, robber) {
+	function drawRobber(canvas, robber) {
 		var xOffset = robber.column * HEX_WIDTH * 3 / 4;
 		var yOffset = robber.diagonal * HEX_HEIGHT - robber.column * HEX_HEIGHT / 2;
 		var x = xOffset + xOffsetGlobal + HEX_WIDTH / 2;
