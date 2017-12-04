@@ -38,6 +38,9 @@ public class RemotePlayer extends Player {
 	public static final String RB = "RB";
 	public static final String PLACE = "PLACE";
 	public static final String TEAM = "TEAM";
+	public static final String TRADE = "TRADE";
+	public static final String BANK = "BANK";
+
 
 	@JsonIgnore
 	private WebSocket connection;
@@ -189,7 +192,7 @@ public class RemotePlayer extends Player {
 				} else {
 					game.broadcastConsoleMessage(name + " has just built a new road.");
 				}
-			} else if(response.startsWith(CITY)) {
+			} else if (response.startsWith(CITY)) {
 				int res = buy(response);
 				if (res == 1) {
 					sendConsoleMessage("You cannot place a city there.");
@@ -198,10 +201,114 @@ public class RemotePlayer extends Player {
 				} else {
 					game.broadcastConsoleMessage(name + " has just built a new city.");
 				}
+			} else if (response.startsWith(TRADE + " " + BANK)) {
+				String data = response.substring((TRADE + " " + BANK).length() + 1);
+				int res = bankTrade(data);
+				if (res == 1) {
+					sendConsoleMessage("You have submitted an invalid trade.");
+				} else if (res == 2) {
+					sendConsoleMessage("You do not have the resources to make that trade.");
+				} else {
+					String[] split = data.split(" ");
+					int[] amounts = new int[10];
+					for (int i = 0; i < split.length; i++) {
+						amounts[i] = Integer.parseInt(split[i]);
+					}
+					String trade = "";
+					boolean added = false;
+					for (int i = 0; i < 5; i++) {
+						if (amounts[i] > 0) {
+							if (added) trade += " + ";
+							trade += amounts[i] + " x " + Hand.intToCard(i);
+							added = true;
+						}
+					}
+					trade += " for ";
+					added = false;
+					for (int i = 5; i < 10; i++) {
+						if (amounts[i] > 0) {
+							if (added) trade += " + ";
+							trade += amounts[i] + " x " + Hand.intToCard(i - 5);
+							added = true;
+						}
+					}
+					game.broadcastConsoleMessage(name + " has just traded with the bank: " + trade + ".");
+				}
+			} else if (response.startsWith(TRADE + " " + GAMESTATE_PLAYERS)) {
+				String data = response.substring((TRADE + " " + GAMESTATE_PLAYERS).length() + 1);
+				int res = playerTrade(data);
+				if (res == -1) {
+					sendConsoleMessage("You have submitted an invalid trade.");
+				} else if (res == -2) {
+					game.broadcastConsoleMessage(name + " has cancelled his trade.");
+				} else {
+					String[] split = data.split(" ");
+					int[] amounts = new int[10];
+					for (int i = 0; i < split.length; i++) {
+						amounts[i] = Integer.parseInt(split[i]);
+					}
+					String trade = "";
+					boolean added = false;
+					for (int i = 0; i < 5; i++) {
+						if (amounts[i] > 0) {
+							if (added) trade += " + ";
+							trade += amounts[i] + " x " + Hand.intToCard(i);
+							added = true;
+						}
+					}
+					trade += " for ";
+					added = false;
+					for (int i = 5; i < 10; i++) {
+						if (amounts[i] > 0) {
+							if (added) trade += " + ";
+							trade += amounts[i] + " x " + Hand.intToCard(i - 5);
+							added = true;
+						}
+					}
+					game.broadcastConsoleMessage(name + " has just traded with " + game.getPlayers().get(res).getName() + ": " + trade + ".");
+				}
 			} else {
-				Utility.log(response);
+				Utility.log("Unknown message type: " + response);
 			}
 		}
+	}
+
+	@Override
+	public int[] sendTradeOffer(CatanBoard board, ArrayList<PlayerData> players, int sourcePlayer, int[] trade) {
+		String json = "";
+		json += "{";
+		json += "\"source\":" + sourcePlayer + ",";
+		json += "\"trade\":" + Arrays.toString(trade);
+		json += "}";
+		send(TRADE, json);
+		waitForResponse();
+		String response = this.response.poll().substring(TRADE.length() + 1);
+		if (response.equals("reject")) {
+			return new int[0];
+		}
+		String[] data = response.split(" ");
+		int[] amounts = new int[10];
+		for (int i = 0; i < data.length; i++) {
+			amounts[i] = Integer.parseInt(data[i]);
+		}
+		return amounts;
+	}
+
+	@Override
+	public int sendTradeResponses(int[][] responses) {
+		ObjectMapper mapper = new ObjectMapper();
+		try {
+			send(RESPONSE + " " + TRADE, mapper.writeValueAsString(responses));
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+		}
+		waitForResponse();
+		String response = this.response.poll();
+		String prefix = TRADE;
+		if (response.startsWith(prefix)) {
+			return Integer.parseInt(response.substring(prefix.length() + 1));
+		}
+		return -1;
 	}
 
 	@Override

@@ -109,6 +109,7 @@
 	
 	var expectedMessage = NONE;
 	var board = {};
+	var playerData = [];
 	var hexes = [];
 	var devCards = [];
 	
@@ -150,6 +151,10 @@
 				placeInitial();
 			} else if(expectedMessage == TEAM) {
 				team = parseInt(event.data);
+			} else if(expectedMessage == RESPONSE + " " + TRADE) {
+				selectOffer(JSON.parse(event.data));
+			} else if(expectedMessage == TRADE) {
+				acceptOffer(JSON.parse(event.data));
 			} else {
 				console.log(event.data);
 			}
@@ -212,6 +217,10 @@
 		if(devCards.rb.playable > 0)
 			html += "	<input type='submit' class='btn btn-primary' name='action' value='Play Road Building' /> ";
 		html += "</td></tr>";
+		html += "<tr>";
+		html += "<td colspan='2'><input type='submit' class='btn btn-primary' name='action' value='Trade with Players' /> ";
+		html += "<input type='submit' class='btn btn-primary' name='action' value='Trade with Bank' /></td>";
+		html += "</tr>";
 		html += "<tr><td colspan='2'>";
 		html += "	<input type='submit' class='btn btn-primary' name='action' value='End Turn' /> ";
 		html += "</td></tr>";
@@ -236,9 +245,298 @@
 				
 			} else if(val == "Play Road Building") {
 				
+			} else if(val == "Trade with Players") {
+				playerTrade();
+			} else if(val == "Trade with Bank") {
+				bankTrade();
 			} else if(val == "End Turn") {
 				socket.send(RESPONSE + " " + TURN);
 				updateForm("", null);
+			}
+		};
+		
+		updateForm(html, onsubmit);
+	}
+	
+	function buildTradeMenu(data=null) {
+		var amounts = [];
+		if(data != null) {
+			amounts = data.trade;
+		} else amounts = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+		var html = "<table class='table table-sm'>";
+		html += "<thead>";
+		html += "<tr><th>Action</th><th colspan='5'>Resource</th></tr>";
+		html += "</thead><tbody>";
+		html += "<tr>";
+		html += "	<td>Give</td>";
+		html += "	<td><img src='images/wood.png' class='resource-icon' /></td>";
+		html += "	<td><img src='images/sheep.png' class='resource-icon' /></td>";
+		html += "	<td><img src='images/wheat.png' class='resource-icon' /></td>";
+		html += "	<td><img src='images/stone.png' class='resource-icon' /></td>";
+		html += "	<td><img src='images/brick.png' class='resource-icon' /></td>";
+		html += "</tr>";
+		html += "<tr>";
+		html += "	<td></td>";
+		html += "	<td><input type='submit' resource='wood' class='btn btn-sm btn-secondary give' name='action' value='+'/></td>";
+		html += "	<td><input type='submit' resource='sheep' class='btn btn-sm btn-secondary give' name='action' value='+'/></td>";
+		html += "	<td><input type='submit' resource='wheat' class='btn btn-sm btn-secondary give' name='action' value='+'/></td>";
+		html += "	<td><input type='submit' resource='stone' class='btn btn-sm btn-secondary give' name='action' value='+'/></td>";
+		html += "	<td><input type='submit' resource='brick' class='btn btn-sm btn-secondary give' name='action' value='+'/></td>";
+		html += "</tr>";
+		html += "<tr>";
+		html += "	<td></td>";
+		html += "	<td id='wood-give-amt' class='text-center' >" + amounts[5] + "</td>";
+		html += "	<td id='sheep-give-amt' class='text-center'>" + amounts[6] + "</td>";
+		html += "	<td id='wheat-give-amt' class='text-center'>" + amounts[7] + "</td>";
+		html += "	<td id='stone-give-amt' class='text-center'>" + amounts[8] + "</td>";
+		html += "	<td id='brick-give-amt' class='text-center'>" + amounts[9] + "</td>";
+		html += "</tr>";
+		html += "<tr>";
+		html += "	<td></td>";
+		html += "	<td><input type='submit' resource='wood' class='btn btn-sm btn-secondary give' name='action' value='-'/></td>";
+		html += "	<td><input type='submit' resource='sheep' class='btn btn-sm btn-secondary give' name='action' value='-'/></td>";
+		html += "	<td><input type='submit' resource='wheat' class='btn btn-sm btn-secondary give' name='action' value='-'/></td>";
+		html += "	<td><input type='submit' resource='stone' class='btn btn-sm btn-secondary give' name='action' value='-'/></td>";
+		html += "	<td><input type='submit' resource='brick' class='btn btn-sm btn-secondary give' name='action' value='-'/></td>";
+		html += "</tr>";
+		html += "<tr>";
+		html += "	<td>Take</td>";
+		html += "	<td><img src='images/wood.png' class='resource-icon' /></td>";
+		html += "	<td><img src='images/sheep.png' class='resource-icon' /></td>";
+		html += "	<td><img src='images/wheat.png' class='resource-icon' /></td>";
+		html += "	<td><img src='images/stone.png' class='resource-icon' /></td>";
+		html += "	<td><img src='images/brick.png' class='resource-icon' /></td>";
+		html += "</tr>";
+		html += "<tr>";
+		html += "	<td></td>";
+		html += "	<td><input type='submit' resource='wood' class='btn btn-sm btn-secondary take' name='action' value='+'/></td>";
+		html += "	<td><input type='submit' resource='sheep' class='btn btn-sm btn-secondary take' name='action' value='+'/></td>";
+		html += "	<td><input type='submit' resource='wheat' class='btn btn-sm btn-secondary take' name='action' value='+'/></td>";
+		html += "	<td><input type='submit' resource='stone' class='btn btn-sm btn-secondary take' name='action' value='+'/></td>";
+		html += "	<td><input type='submit' resource='brick' class='btn btn-sm btn-secondary take' name='action' value='+'/></td>";
+		html += "</tr>";
+		html += "<tr>";
+		html += "	<td></td>";
+		html += "	<td id='wood-take-amt' class='text-center' >" + amounts[0] + "</td>";
+		html += "	<td id='sheep-take-amt' class='text-center'>" + amounts[1] + "</td>";
+		html += "	<td id='wheat-take-amt' class='text-center'>" + amounts[2] + "</td>";
+		html += "	<td id='stone-take-amt' class='text-center'>" + amounts[3] + "</td>";
+		html += "	<td id='brick-take-amt' class='text-center'>" + amounts[4] + "</td>";
+		html += "</tr>";
+		html += "<tr>";
+		html += "	<td></td>";
+		html += "	<td><input type='submit' resource='wood' class='btn btn-sm btn-secondary take' name='action' value='-'/></td>";
+		html += "	<td><input type='submit' resource='sheep' class='btn btn-sm btn-secondary take' name='action' value='-'/></td>";
+		html += "	<td><input type='submit' resource='wheat' class='btn btn-sm btn-secondary take' name='action' value='-'/></td>";
+		html += "	<td><input type='submit' resource='stone' class='btn btn-sm btn-secondary take' name='action' value='-'/></td>";
+		html += "	<td><input type='submit' resource='brick' class='btn btn-sm btn-secondary take' name='action' value='-'/></td>";
+		html += "</tr>";
+		html += "<tr><td colspan='2'>"
+		if(data == null) {
+			html += "<input type='submit' class='btn btn-primary btn-sm' name='action' value='Submit' />";
+		} else {
+			html += "<input type='submit' class='btn btn-primary btn-sm' name='action' value='Resend' /> ";
+			html += "<input type='submit' class='btn btn-primary btn-sm' name='action' value='Reject' />";
+		}
+		html += "</td></tr>";
+		html += "</tbody></table>";
+		return html;
+	}
+	
+	function acceptOffer(data) {
+		console.log(data);
+		var html = buildTradeMenu(data);
+		
+		var onsubmit = function(e) {
+			e.preventDefault();
+			var clicked = $("input[type=submit][clicked=true]");
+			var val = clicked.attr('value');
+			var res = clicked.attr('resource');
+			var counter;
+			if(clicked.hasClass("give")) {
+				counter = $("#" + res + "-give-amt");
+			} else if(clicked.hasClass("take")) {
+				counter = $("#" + res + "-take-amt");
+			}
+			if(counter != null) {
+				var change = 0;
+				if(val == '+') change = 1;
+				else change = -1;
+				var count = parseInt(counter.html());
+				count += change;
+				if(count >= 0)
+					counter.html("" + count);
+			} else if(val == 'Resend') {
+				var params = "";
+				params += $("#wood-take-amt").html() + " ";
+				params += $("#sheep-take-amt").html() + " ";
+				params += $("#wheat-take-amt").html() + " ";
+				params += $("#stone-take-amt").html() + " ";
+				params += $("#brick-take-amt").html() + " ";
+				params += $("#wood-give-amt").html() + " ";
+				params += $("#sheep-give-amt").html() + " ";
+				params += $("#wheat-give-amt").html() + " ";
+				params += $("#stone-give-amt").html() + " ";
+				params += $("#brick-give-amt").html();
+				socket.send(RESPONSE + " " + TRADE + " " + params);
+				updateForm("", null);
+			} else if(val == 'Reject') {
+				socket.send(RESPONSE + " " + TRADE + " reject");
+				updateForm("", null);
+			}
+		};
+		
+		updateForm(html, onsubmit);
+	}
+	
+	function selectOffer(responses) {
+		console.log(responses);
+		var playerId = 0;
+		var html = "";
+		html += "<div id='accordion' role='tablist'>";
+		for(var i = 0; i < responses.length; i++) {
+			if(playerId == team) playerId++;
+			html += "<div class='card'>";
+			html += "	<div class='card-header' rol='tab' id='response-"+i+"-header'>";
+			html += "		<h5 class='mb-0'>";
+			html += "			<a data-toggle='collapse' href='#response-"+i+"-collapse' aria-expanded='false' aria-controls='response-"+i+"-collapse'>";
+			var allow = false;
+			if(responses[i].length == 0) {
+				html += "Rejected - ";
+				responses[i] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+			} else {
+				allow = true;
+				html += "Accepted/Modified - ";
+			}
+			html += 				playerData[playerId].name;
+			html += "			</a>";
+			html += "		</h5>";
+			html += "	</div>";
+			html += "	<div id='response-"+i+"-collapse' class='collapse' role='tabpanel' aria-labelledby='response-"+i+"-header' data-parent='#accordion'>";
+			html += "		<div class='card-body'>";
+			html += "			<table class='table table-sm'>";
+			html += "				<tbody>";
+			html += "					<tr>";
+			html += "						<td>You give:</td>";
+			html += "						<td><img class='resource-icon' src='images/wood.png' /> " + responses[i][0] + "</td>";
+			html += "						<td><img class='resource-icon' src='images/sheep.png' /> " + responses[i][1] + "</td>";
+			html += "						<td><img class='resource-icon' src='images/wheat.png' /> " + responses[i][2] + "</td>";
+			html += "						<td><img class='resource-icon' src='images/stone.png' /> " + responses[i][3] + "</td>";
+			html += "						<td><img class='resource-icon' src='images/brick.png' /> " + responses[i][4] + "</td>";
+			html += "					</tr>";
+			html += "					<tr>";
+			html += "						<td>You take:</td>";
+			html += "						<td><img class='resource-icon' src='images/wood.png' /> " + responses[i][5] + "</td>";
+			html += "						<td><img class='resource-icon' src='images/sheep.png' /> " + responses[i][6] + "</td>";
+			html += "						<td><img class='resource-icon' src='images/wheat.png' /> " + responses[i][7] + "</td>";
+			html += "						<td><img class='resource-icon' src='images/stone.png' /> " + responses[i][8] + "</td>";
+			html += "						<td><img class='resource-icon' src='images/brick.png' /> " + responses[i][9] + "</td>";
+			html += "					</tr>";
+			if(allow) {
+				html += "				<tr>";
+				html += "					<td><input type='submit' tradeId='"+i+"' name='action' class='btn btn-primary' value='Accept' /></td>";
+				html += "				</tr>";
+			}
+			html += "				</tbody>";
+			html += "			</table><br />";
+			html += "			<input type='submit' name='action' class='btn btn-primary' value='Cancel' />";
+			html += "		</div>";
+			html += "	</div>";
+			html += "</div>";
+			playerId++;
+		}
+		html += "</div>";
+		
+		var onsubmit = function(e) {
+			e.preventDefault();
+			var clicked = $("input[type=submit][clicked=true]");
+			var val = clicked.attr('value');
+			var tradeId = clicked.attr('tradeId');
+			if(tradeId == null) tradeId = -1;
+			socket.send(RESPONSE + " " + TRADE + " " + tradeId);
+			doTurn();
+		};
+		updateForm(html, onsubmit);
+	}
+	
+	function playerTrade() {
+		var html = buildTradeMenu();
+		
+		var onsubmit = function(e) {
+			e.preventDefault();
+			var clicked = $("input[type=submit][clicked=true]");
+			var val = clicked.attr('value');
+			var res = clicked.attr('resource');
+			var counter;
+			if(clicked.hasClass("give")) {
+				counter = $("#" + res + "-give-amt");
+			} else if(clicked.hasClass("take")) {
+				counter = $("#" + res + "-take-amt");
+			}
+			if(counter != null) {
+				var change = 0;
+				if(val == '+') change = 1;
+				else change = -1;
+				var count = parseInt(counter.html());
+				count += change;
+				if(count >= 0)
+					counter.html("" + count);
+			} else if(val == 'Submit') {
+				var params = "";
+				params += $("#wood-give-amt").html() + " ";
+				params += $("#sheep-give-amt").html() + " ";
+				params += $("#wheat-give-amt").html() + " ";
+				params += $("#stone-give-amt").html() + " ";
+				params += $("#brick-give-amt").html() + " ";
+				params += $("#wood-take-amt").html() + " ";
+				params += $("#sheep-take-amt").html() + " ";
+				params += $("#wheat-take-amt").html() + " ";
+				params += $("#stone-take-amt").html() + " ";
+				params += $("#brick-take-amt").html();
+				socket.send(RESPONSE + " " + TRADE + " " + PLAYERS + " " + params);
+				updateForm("Waiting for all players to respond to offer...", null);
+			}
+		}
+		
+		updateForm(html, onsubmit);
+	}
+	
+	function bankTrade() {
+		var html = buildTradeMenu();
+		
+		var onsubmit = function(e) {
+			e.preventDefault();
+			var clicked = $("input[type=submit][clicked=true]");
+			var val = clicked.attr('value');
+			var res = clicked.attr('resource');
+			var counter;
+			if(clicked.hasClass("give")) {
+				counter = $("#" + res + "-give-amt");
+			} else if(clicked.hasClass("take")) {
+				counter = $("#" + res + "-take-amt");
+			}
+			if(counter != null) {
+				var change = 0;
+				if(val == '+') change = 1;
+				else change = -1;
+				var count = parseInt(counter.html());
+				count += change;
+				if(count >= 0)
+					counter.html("" + count);
+			} else if(val == 'Submit') {
+				var params = "";
+				params += $("#wood-give-amt").html() + " ";
+				params += $("#sheep-give-amt").html() + " ";
+				params += $("#wheat-give-amt").html() + " ";
+				params += $("#stone-give-amt").html() + " ";
+				params += $("#brick-give-amt").html() + " ";
+				params += $("#wood-take-amt").html() + " ";
+				params += $("#sheep-take-amt").html() + " ";
+				params += $("#wheat-take-amt").html() + " ";
+				params += $("#stone-take-amt").html() + " ";
+				params += $("#brick-take-amt").html();
+				socket.send(RESPONSE + " " + TRADE + " " + BANK + " " + params);
+				doTurn();
 			}
 		};
 		
@@ -612,6 +910,7 @@
 	}
 	
 	function updatePlayers(players) {
+		playerData = players;
 		for(var i = 0; i < players.length; i++) {
 			var player = players[i];
 			var playerList = "";

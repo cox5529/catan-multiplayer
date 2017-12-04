@@ -22,7 +22,7 @@ public class AIPlayer extends Player {
 
 	@Override
 	public int[] moveRobber(CatanBoard board, ArrayList<PlayerData> players) {
-		return new int[2];
+		return new int[]{(int) (Math.random() * 2 + 2), (int) (Math.random() * 2 + 1)};
 	}
 
 	@Override
@@ -34,11 +34,21 @@ public class AIPlayer extends Player {
 	public String getPlacement(CatanBoard board, ArrayList<PlayerData> players, boolean giveCards) {
 		int diag = (int) (Math.random() * 5 + 1);
 		int col = (int) (Math.random() * 5);
-		while(board.getTiles()[diag][col] == null) {
+		while (board.getTiles()[diag][col] == null) {
 			diag = (int) (Math.random() * 5 + 1);
 			col = (int) (Math.random() * 5);
 		}
 		int pos = (int) (Math.random() * 6);
 		return String.format("%d %d %d %d %d %d", diag, col, pos, diag, col, pos);
+	}
+
+	@Override
+	public int[] sendTradeOffer(CatanBoard board, ArrayList<PlayerData> players, int sourcePlayer, int[] trade) {
+		return new int[0];
+	}
+
+	@Override
+	public int sendTradeResponses(int[][] responses) {
+		return -1;
 	}
 }

@@ -6,6 +6,7 @@ import cox5529.catan.Card;
 import cox5529.catan.CatanGame;
 import cox5529.catan.board.CatanBoard;
 import cox5529.catan.board.CatanLink;
+import cox5529.catan.board.CatanPort;
 import cox5529.catan.board.CatanSpace;
 import cox5529.catan.board.building.CatanBuilding;
 import cox5529.catan.board.building.City;
@@ -51,6 +52,10 @@ public abstract class Player {
 
 	public abstract String getPlacement(CatanBoard board, ArrayList<PlayerData> players, boolean giveCards);
 
+	public abstract int[] sendTradeOffer(CatanBoard board, ArrayList<PlayerData> players, int sourcePlayer, int[] trade);
+
+	public abstract int sendTradeResponses(int[][] responses);
+
 	public void place(CatanBoard board, ArrayList<PlayerData> players, boolean giveCards) {
 		String[] data = getPlacement(board, players, giveCards).split(" ");
 		int spaceDiag = Integer.parseInt(data[0]);
@@ -61,15 +66,20 @@ public abstract class Player {
 		int linkId = Integer.parseInt(data[5]);
 
 		if (board.isValidPlacementLocation(linkDiag, linkCol, linkId, spaceDiag, spaceCol, spaceId)) {
-			CatanSpace space = board.findSpace(spaceDiag, spaceCol, spaceId);
 			CatanLink link = board.findLink(linkDiag, linkCol, linkId);
-			Settlement settlement = new Settlement(this);
-			space.setBuilding(settlement);
-			settlement.setSpace(space);
 			link.setRoad(team);
+			buildSettlement(spaceDiag, spaceCol, spaceId);
 		} else {
 			place(board, players, giveCards);
 		}
+	}
+
+	private void buildSettlement(int diag, int col, int spaceId) {
+		CatanSpace space = game.getBoard().findSpace(diag, col, spaceId);
+		Settlement settlement = new Settlement(this);
+		buildings.add(settlement);
+		space.setBuilding(settlement);
+		settlement.setSpace(space);
 	}
 
 	public final void onTurn(CatanBoard board, ArrayList<PlayerData> players) {
@@ -77,6 +87,108 @@ public abstract class Player {
 			developmentCard.setGainedThisTurn(false);
 		}
 		doTurn(board, players);
+	}
+
+	public final int playerTrade(String data) {
+		String[] split = data.split(" ");
+		int[] amounts = new int[10];
+		for (int i = 0; i < split.length; i++) {
+			amounts[i] = Integer.parseInt(split[i]);
+		}
+		int[][] responses = game.doTrade(this, amounts);
+		int tradeId = sendTradeResponses(responses);
+		if (tradeId != -1) {
+			int playerId = tradeId;
+			if (tradeId >= team) playerId++;
+			Player player = game.getPlayers().get(playerId);
+			int[] trade = responses[tradeId];
+			if (trade.length == 10) {
+				// make sure both players have resources
+				for(int i = 0; i < 5; i++) {
+					if(hand.getCount(i) < amounts[i]) {
+						return -1;
+					}
+				}
+				for(int i = 5; i < 10; i++) {
+					if(player.getHand().getCount(i - 5) < amounts[i]) {
+						return -1;
+					}
+				}
+				// trade resources
+				for(int i = 0; i < 5; i++) {
+					hand.removeCard(i, amounts[i]);
+					player.getHand().addCard(i, amounts[i]);
+				}
+				for(int i = 5; i < 10; i++) {
+					player.getHand().removeCard(i - 5, amounts[i]);
+					hand.addCard(i - 5, amounts[i]);
+				}
+				game.broadcastGameState();
+				return tradeId;
+			}
+			return -1;
+		}
+		return -2;
+	}
+
+	public final int bankTrade(String data) {
+		String[] split = data.split(" ");
+		int[] amounts = new int[10];
+		for (int i = 0; i < split.length; i++) {
+			amounts[i] = Integer.parseInt(split[i]);
+		}
+		int[] rates = new int[5];
+		for (int i = 0; i < rates.length; i++) {
+			rates[i] = 4;
+		}
+		for (CatanBuilding building : buildings) {
+			CatanPort port = building.getSpace().getPort();
+			if (port != null) {
+				Card type = port.getType();
+				if (type == Card.All) {
+					for (int i = 0; i < rates.length; i++) {
+						if (rates[i] == 4) rates[i] = 3;
+					}
+				} else if (type == Card.Wood) {
+					rates[0] = 2;
+				} else if (type == Card.Sheep) {
+					rates[1] = 2;
+				} else if (type == Card.Wheat) {
+					rates[2] = 2;
+				} else if (type == Card.Stone) {
+					rates[3] = 2;
+				} else if (type == Card.Brick) {
+					rates[4] = 2;
+				}
+			}
+		}
+		for (int i = 0; i < 5; i++) {
+			if (amounts[i] != 0 && amounts[i + 5] != 0) {
+				if (amounts[i] > amounts[i + 5]) amounts[i] -= amounts[i + 5];
+				else amounts[i + 5] -= amounts[i];
+			}
+			if (amounts[i] % rates[i] != 0) {
+				return 1;
+			} else if (amounts[i] > hand.getCount(i)) {
+				return 2;
+			}
+		}
+		int resourcesGained = 0;
+		for (int i = 0; i < 5; i++) {
+			resourcesGained += amounts[i] / rates[i];
+		}
+		int requestedCount = 0;
+		for (int i = 5; i < 10; i++) {
+			requestedCount += amounts[i];
+		}
+		if (resourcesGained != requestedCount) return 1;
+		for (int i = 0; i < 5; i++) {
+			hand.removeCard(i, amounts[i]);
+		}
+		for (int i = 5; i < 10; i++) {
+			hand.addCard(i - 5, amounts[i]);
+		}
+		return 0;
 	}
 
 	public final int buy(String object) {
@@ -100,11 +212,7 @@ public abstract class Player {
 				int col = Integer.parseInt(data[2]);
 				int spaceId = Integer.parseInt(data[3]);
 				if (game.getBoard().isValidSettlementLocation(diag, col, spaceId, team, false)) {
-					CatanSpace space = game.getBoard().findSpace(diag, col, spaceId);
-					Settlement settlement = new Settlement(this);
-					space.setBuilding(settlement);
-					settlement.setSpace(space);
-					buildings.add(settlement);
+					buildSettlement(diag, col, spaceId);
 					hand.removeCard(Card.Sheep);
 					hand.removeCard(Card.Wood);
 					hand.removeCard(Card.Wheat);
@@ -133,13 +241,13 @@ public abstract class Player {
 			} else {
 				return 2;
 			}
-		} else if(object.startsWith(CITY)) {
-			if(hand.getCount(Card.Wheat) >= 2 && hand.getCount(Card.Stone) >= 3) {
+		} else if (object.startsWith(CITY)) {
+			if (hand.getCount(Card.Wheat) >= 2 && hand.getCount(Card.Stone) >= 3) {
 				String[] data = object.split(" ");
 				int diag = Integer.parseInt(data[1]);
 				int col = Integer.parseInt(data[2]);
 				int spaceId = Integer.parseInt(data[3]);
-				if(game.getBoard().isValidCityLocation(diag, col, spaceId, team)) {
+				if (game.getBoard().isValidCityLocation(diag, col, spaceId, team)) {
 					CatanSpace space = game.getBoard().findSpace(diag, col, spaceId);
 					Settlement settlement = (Settlement) space.getBuilding();
 					buildings.remove(settlement);
@@ -245,18 +353,15 @@ public abstract class Player {
 		player.setGame(game);
 		player.getDevCards().clear();
 		player.getPlayedDevCards().clear();
-		hand.addCard(Card.Sheep);
-		hand.addCard(Card.Stone);
-		hand.addCard(Card.Wheat);
-		hand.addCard(Card.Wood);
-		hand.addCard(Card.Brick);
 		player.setHand(hand.copy());
 		for (DevelopmentCard card : playedDevCards)
 			player.getPlayedDevCards().add(card);
 		for (DevelopmentCard card : devCards)
 			player.getDevCards().add(card);
-		player.getDevCards().add(new Knight());
-		player.getDevCards().add(new Monopoly());
+		for(CatanBuilding building: buildings) {
+			player.getBuildings().add(building);
+			building.setPlayer(player);
+		}
 		return player;
 	}
 

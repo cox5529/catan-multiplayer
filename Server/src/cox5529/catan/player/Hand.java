@@ -20,9 +20,22 @@ public class Hand {
 		return hand.get(card);
 	}
 
+	public int getCount(int card) {
+		return getCount(intToCard(card));
+	}
+
 	public void addCard(Card card) {
 		hand.put(card, hand.get(card) + 1);
 	}
+
+	public void addCard(int cardId, int amount) {
+		Card card = intToCard(cardId);
+
+		for (int i = 0; i < amount; i++) {
+			addCard(card);
+		}
+	}
+
 
 	public boolean removeCard(Card card) {
 		if (hand.get(card) > 0) {
@@ -32,6 +45,16 @@ public class Hand {
 		return false;
 	}
 
+	public boolean removeCard(int cardId, int amount) {
+		Card card = intToCard(cardId);
+
+		if (getCount(card) < amount) return false;
+		for (int i = 0; i < amount; i++) {
+			removeCard(card);
+		}
+		return true;
+	}
+
 	public void clear() {
 		hand = new HashMap<>();
 		hand.put(Card.Brick, 0);
@@ -39,6 +62,15 @@ public class Hand {
 		hand.put(Card.Sheep, 0);
 		hand.put(Card.Wheat, 0);
 		hand.put(Card.Wood, 0);
+	}
+
+	public static Card intToCard(int input) {
+		if (input == 0) return Card.Wood;
+		if (input == 1) return Card.Sheep;
+		if (input == 2) return Card.Wheat;
+		if (input == 3) return Card.Stone;
+		if (input == 4) return Card.Brick;
+		return Card.None;
 	}
 
 	public String toJSON() {

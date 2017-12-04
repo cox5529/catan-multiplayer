@@ -20,6 +20,9 @@ var YOP = "YOP";
 var RB = "RB";
 var PLACE = "PLACE";
 var TEAM = "TEAM";
+var TRADE = "TRADE";
+var BANK = "BANK";
+var PLAYERS = "PLAYERS";
 
 var SHEEP_COLOR = "#a8d242";
 var WHEAT_COLOR = "#ffd300";

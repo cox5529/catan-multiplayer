@@ -135,11 +135,24 @@ public class CatanGame implements Runnable {
 		return a + b;
 	}
 
+	public int[][] doTrade(Player source, int[] trade) {
+		int[][] re = new int[3][];
+		int idx = 0;
+		for (Player player : players) {
+			if (player != source) {
+				int[] response = player.sendTradeOffer(board, buildPlayerData(), source.getTeam(), trade);
+				re[idx] = response;
+				idx++;
+			}
+		}
+		return re;
+	}
+
 	private void doTurn(Player player) {
 		int roll = getDiceRoll();
 		broadcastGameState();
 		broadcastConsoleMessage("It is now " + player.getName() + "'s turn. " + player.getName() + " rolled a " + roll + ".");
-		if(roll != 7) {
+		if (roll != 7) {
 			for (CatanSpace space : board.getSpaces()) {
 				CatanBuilding building = space.getBuilding();
 				if (building != null) {
@@ -147,7 +160,7 @@ public class CatanGame implements Runnable {
 				}
 			}
 		} else {
-			player.moveRobber(board, buildPlayerData());
+			moveRobber(player);
 		}
 		player.onTurn(board, buildPlayerData());
 	}
