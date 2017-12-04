@@ -4,18 +4,23 @@ package cox5529.catan.board;
 import cox5529.Utility;
 import cox5529.catan.Card;
 import cox5529.catan.board.building.CatanBuilding;
+import cox5529.catan.board.building.Settlement;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Set;
 
 public class CatanBoard {
 
 	private CatanTile[][] tiles; // diagonal, column
 	private CatanPort[] ports;
 	private CatanLink[] links;
+	private ArrayList<CatanSpace> spaces;
 	private Robber robber;
 
 	public CatanBoard() {
 		fillArrays();
+		spaces = new ArrayList<>();
 		robber = new Robber(0, 0, null);
 	}
 
@@ -33,6 +38,10 @@ public class CatanBoard {
 
 	public CatanLink[] getLinks() {
 		return links;
+	}
+
+	public ArrayList<CatanSpace> getSpaces() {
+		return spaces;
 	}
 
 	private void fillArrays() {
@@ -91,11 +100,13 @@ public class CatanBoard {
 									space.addTile(tile);
 									tile.getSpaces()[point[2]] = space;
 								}
+								spaces.add(space);
 							}
 						} else {
 							CatanSpace space = new CatanSpace();
 							space.addTile(tiles[i][j]);
 							tiles[i][j].getSpaces()[k] = space;
+							spaces.add(space);
 						}
 					}
 				}
@@ -221,6 +232,15 @@ public class CatanBoard {
 		boolean road = (link.getRearSpace().equals(space) || link.getFrontSpace().equals(space));
 		boolean settlement = isValidSettlementLocation(spaceDiag, spaceCol, spacePos, 5, true);
 		return road && settlement;
+	}
+
+	public boolean isValidCityLocation(int diag, int col, int pos, int team) {
+		CatanSpace space = findSpace(diag, col, pos);
+		if(space != null) {
+			CatanBuilding building = space.getBuilding();
+			return building != null && building instanceof Settlement && building.getPlayer().getTeam() == team;
+		}
+		return false;
 	}
 
 	private int getHexCountLink(int i, int j, int k) {

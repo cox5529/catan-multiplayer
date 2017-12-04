@@ -189,6 +189,15 @@ public class RemotePlayer extends Player {
 				} else {
 					game.broadcastConsoleMessage(name + " has just built a new road.");
 				}
+			} else if(response.startsWith(CITY)) {
+				int res = buy(response);
+				if (res == 1) {
+					sendConsoleMessage("You cannot place a city there.");
+				} else if (res == 2) {
+					sendConsoleMessage("You do not have the resources to build a city.");
+				} else {
+					game.broadcastConsoleMessage(name + " has just built a new city.");
+				}
 			} else {
 				Utility.log(response);
 			}

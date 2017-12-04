@@ -8,6 +8,7 @@ import cox5529.catan.board.CatanBoard;
 import cox5529.catan.board.CatanLink;
 import cox5529.catan.board.CatanSpace;
 import cox5529.catan.board.building.CatanBuilding;
+import cox5529.catan.board.building.City;
 import cox5529.catan.board.building.Settlement;
 import cox5529.catan.devcard.DevelopmentCard;
 import cox5529.catan.devcard.Knight;
@@ -59,9 +60,9 @@ public abstract class Player {
 		int linkCol = Integer.parseInt(data[4]);
 		int linkId = Integer.parseInt(data[5]);
 
-		CatanSpace space = board.findSpace(spaceDiag, spaceCol, spaceId);
-		CatanLink link = board.findLink(linkDiag, linkCol, linkId);
 		if (board.isValidPlacementLocation(linkDiag, linkCol, linkId, spaceDiag, spaceCol, spaceId)) {
+			CatanSpace space = board.findSpace(spaceDiag, spaceCol, spaceId);
+			CatanLink link = board.findLink(linkDiag, linkCol, linkId);
 			Settlement settlement = new Settlement(this);
 			space.setBuilding(settlement);
 			settlement.setSpace(space);
@@ -98,8 +99,8 @@ public abstract class Player {
 				int diag = Integer.parseInt(data[1]);
 				int col = Integer.parseInt(data[2]);
 				int spaceId = Integer.parseInt(data[3]);
-				CatanSpace space = game.getBoard().findSpace(diag, col, spaceId);
 				if (game.getBoard().isValidSettlementLocation(diag, col, spaceId, team, false)) {
+					CatanSpace space = game.getBoard().findSpace(diag, col, spaceId);
 					Settlement settlement = new Settlement(this);
 					space.setBuilding(settlement);
 					settlement.setSpace(space);
@@ -121,14 +122,40 @@ public abstract class Player {
 				int diag = Integer.parseInt(data[1]);
 				int col = Integer.parseInt(data[2]);
 				int linkId = Integer.parseInt(data[3]);
-				CatanLink link = game.getBoard().findLink(diag, col, linkId);
 				if (game.getBoard().isValidRoadLocation(diag, col, linkId, team)) {
+					CatanLink link = game.getBoard().findLink(diag, col, linkId);
 					link.setRoad(team);
 					hand.removeCard(Card.Brick);
 					hand.removeCard(Card.Wood);
 					return 0;
 				}
 				return 1;
+			} else {
+				return 2;
+			}
+		} else if(object.startsWith(CITY)) {
+			if(hand.getCount(Card.Wheat) >= 2 && hand.getCount(Card.Stone) >= 3) {
+				String[] data = object.split(" ");
+				int diag = Integer.parseInt(data[1]);
+				int col = Integer.parseInt(data[2]);
+				int spaceId = Integer.parseInt(data[3]);
+				if(game.getBoard().isValidCityLocation(diag, col, spaceId, team)) {
+					CatanSpace space = game.getBoard().findSpace(diag, col, spaceId);
+					Settlement settlement = (Settlement) space.getBuilding();
+					buildings.remove(settlement);
+					City city = new City(this);
+					space.setBuilding(city);
+					city.setSpace(space);
+					buildings.add(city);
+					hand.removeCard(Card.Wheat);
+					hand.removeCard(Card.Wheat);
+					hand.removeCard(Card.Stone);
+					hand.removeCard(Card.Stone);
+					hand.removeCard(Card.Stone);
+					return 0;
+				} else {
+					return 1;
+				}
 			} else {
 				return 2;
 			}

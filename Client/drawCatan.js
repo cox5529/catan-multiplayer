@@ -1,4 +1,4 @@
-function drawBoard(highlightSpaces=false, highlightLinks=false, center=null, init=false) {
+function drawBoard(highlightSpaces=0, highlightLinks=false, center=null, init=false) {
 	var canvas = $("#board")[0].getContext('2d');
 	canvas.fillStyle = WATER_COLOR;
 	canvas.fillRect(0, 0, 600, 600);
@@ -82,7 +82,7 @@ function updateSettlements(tiles) {
 	}
 }
 
-function drawHexes(canvas, tiles, highlightSpaces=false, init=false) {
+function drawHexes(canvas, tiles, highlightSpaces=0, init=false) {
 	hexes = [];
 	for(var i = 0; i < tiles.length; i++) {
 		var row = [];
@@ -212,8 +212,15 @@ function drawSpaces(canvas, tile, column, diagonal, highlightSpaces, init) {
 			x -= HEX_WIDTH / 4;
 			y -= HEX_HEIGHT / 2;
 		}
-			
-		if(space.building != null || (highlightSpaces && isValidSettlement({x: x, y: y}, true))) {
+		
+		
+		if(highlightSpaces == 2 && space.building != null && isValidCity({x: x, y: y})) {
+			canvas.fillStyle = "#000";
+			canvas.beginPath();
+			canvas.arc(x, y, 15, 0, 2 * Math.PI);
+			canvas.closePath();
+			canvas.fill();
+		} else if(space.building != null || (highlightSpaces == 1 && isValidSettlement({x: x, y: y}, true))) {
 			if(space.building == null) {
 				canvas.fillStyle = "#000";
 				canvas.beginPath();
@@ -222,15 +229,31 @@ function drawSpaces(canvas, tile, column, diagonal, highlightSpaces, init) {
 				var team = space.building.player.team;
 				canvas.fillStyle = teams[team].hexColor;
 				canvas.beginPath();
-				canvas.arc(x, y, 10, 0, 2 * Math.PI);
+				if(space.building.type == "city") {
+					canvas.arc(x, y, 10, 0, 2 * Math.PI);
+				} else {
+					canvas.moveTo(x - 5, y - 5);
+					canvas.lineTo(x + 5, y - 5);
+					canvas.lineTo(x + 5, y + 5);
+					canvas.lineTo(x - 5, y + 5);
+					canvas.lineTo(x - 5, y - 5);
+				}
 			}
 			
 			canvas.closePath();
 			canvas.fill();
-			
-			canvas.strokeStyle = "#000";
 			canvas.beginPath();
-			canvas.arc(x, y, 10, 0, 2 * Math.PI);
+			if(space.building != null) {
+				if(space.building.type == "city") {
+					canvas.arc(x, y, 10, 0, 2 * Math.PI);
+				} else {
+					canvas.moveTo(x - 5, y - 5);
+					canvas.lineTo(x + 5, y - 5);
+					canvas.lineTo(x + 5, y + 5);
+					canvas.lineTo(x - 5, y + 5);
+					canvas.lineTo(x - 5, y - 5);
+				}
+			}
 			canvas.closePath();
 			canvas.stroke();
 		}

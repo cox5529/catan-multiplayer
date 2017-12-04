@@ -6,10 +6,10 @@ import cox5529.catan.player.Player;
 
 import java.util.ArrayList;
 
-public class Settlement extends CatanBuilding {
+public class City extends CatanBuilding {
 
-	public Settlement(Player player) {
-		super(player, "settlement");
+	public City(Player player) {
+		super(player, "city");
 	}
 
 	@Override
@@ -17,6 +17,7 @@ public class Settlement extends CatanBuilding {
 		ArrayList<CatanTile> tiles = space.getTiles();
 		for(CatanTile tile: tiles) {
 			if(tile.getResource() != Card.None && tile.getRoll() == roll) {
+				player.getHand().addCard(tile.getResource());
 				player.getHand().addCard(tile.getResource());
 			}
 		}

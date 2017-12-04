@@ -223,7 +223,7 @@
 			if(val == "Build Settlement") {
 				buildSettlement();
 			} else if(val == "Build City") {
-				
+				buildCity();
 			} else if(val == "Build Road") {
 				buildRoad();
 			} else if(val == "Buy Development Card") {
@@ -248,34 +248,50 @@
 	function placeInitial() {
 		showMessage("You may now place a settlement. Click where you would like to place your settlement.");
 		inputArg = board;
-		drawBoard(true, false, null, true);
+		drawBoard(1, false, null, true);
 		onInput = function(x, y) {
 			var pos = calculateSpaceClicked(x, y);
 			if(pos != null && isValidSettlement({x: x, y: y}, true)) {
 				socket.send(RESPONSE + " " + PLACE + " " + SETTLEMENT + " " + pos.hex.diagonal + " " + pos.hex.column + " " + pos.space);
 				showMessage("You may now place a road. Click where you would like to place your road.");
 				inputArg = board;
-				drawBoard(false, true, pos);
+				drawBoard(0, true, pos);
 				onInput = function(x, y) {
 					var pos = calculateLinkClicked(x, y);
 					if(pos != null) {
 						drawBoard();
 						socket.send(RESPONSE + " " + PLACE + " " + ROAD + " " + pos.hex.diagonal + " " + pos.hex.column + " " + pos.link);
+						onInput = null;
 					}
 				};
 			}
 		};
 	}
 	
+	function buildCity() {
+		showMessage("You may now place a city. Click where you would like to place your city.");
+		inputArg = board;
+		drawBoard(2);
+		onInput = function(x, y) {
+			var pos = calculateSpaceClicked(x, y);
+			if(pos != null) {
+				drawBoard();
+				socket.send(RESPONSE + " " + CITY + " " + pos.hex.diagonal + " " + pos.hex.column + " " + pos.space);
+				onInput = null;
+			}
+		}
+	}
+	
 	function buildSettlement() {
 		showMessage("You may now place a settlement. Click where you would like to place your settlement.");
 		inputArg = board;
-		drawBoard(true);
+		drawBoard(1);
 		onInput = function(x, y) {
 			var pos = calculateSpaceClicked(x, y);
 			if(pos != null) {
 				drawBoard();
 				socket.send(RESPONSE + " " + SETTLEMENT + " " + pos.hex.diagonal + " " + pos.hex.column + " " + pos.space);
+				onInput = null;
 			}
 		};
 	}
@@ -283,19 +299,20 @@
 	function buildRoad() {
 		showMessage("You may now place a road. Click where you would like to place your road.");
 		inputArg = board;
-		drawBoard(false, true);
+		drawBoard(0, true);
 		onInput = function(x, y) {
 			var pos = calculateLinkClicked(x, y);
 			if(pos != null) {
 				drawBoard();
 				socket.send(RESPONSE + " " + ROAD + " " + pos.hex.diagonal + " " + pos.hex.column + " " + pos.link);
+				onInput = null;
 			}
 		};
 	}
 	
 	function isValidSettlement(position, init) {
 		var twoSpaces = true;
-		var roads = false;
+		var connected = false;
 		for(var i = 0; i < settlements.length; i++) {
 			var settlement = settlements[i];
 			var d = dist(position.x, position.y, settlement.x, settlement.y);
@@ -309,18 +326,31 @@
 				if(road.team == team) {
 					var d = dist(position.x, position.y, road.start.x, road.start.y);
 					if(d <= 10) {
-						roads = true;
+						connected = true;
 						break;
 					}
 					d = dist(position.x, position.y, road.stop.x, road.stop.y);
 					if(d <= 10) {
-						roads = true;
+						connected = true;
 						break;
 					}
 				}
 			}
 		}
-		return twoSpaces && (roads || init);
+		return twoSpaces && (connected || init);
+	}
+	
+	function isValidCity(position) {
+		for(var i = 0; i < settlements.length; i++) {
+			var settlement = settlements[i];
+			if(settlement.team == team) {
+				var d = dist(position.x, position.y, settlement.x, settlement.y);
+				if(d <= 20) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 	
 	function isValidRoad(start, stop) {

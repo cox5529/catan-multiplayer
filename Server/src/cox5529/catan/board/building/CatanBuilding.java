@@ -9,12 +9,18 @@ public abstract class CatanBuilding {
 	protected Player player;
 	@JsonIgnore
 	protected CatanSpace space;
+	protected String type;
 
-	public CatanBuilding(Player player) {
+	public CatanBuilding(Player player, String type) {
 		this.player = player;
+		this.type = type;
 	}
 
 	public abstract void onRoll(int roll);
+
+	public String getType() {
+		return type;
+	}
 
 	public Player getPlayer() {
 		return player;

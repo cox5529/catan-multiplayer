@@ -2,7 +2,9 @@ package cox5529.catan;
 
 
 import cox5529.catan.board.CatanBoard;
+import cox5529.catan.board.CatanSpace;
 import cox5529.catan.board.Robber;
+import cox5529.catan.board.building.CatanBuilding;
 import cox5529.catan.devcard.*;
 import cox5529.catan.player.AIPlayer;
 import cox5529.catan.player.Player;
@@ -127,6 +129,29 @@ public class CatanGame implements Runnable {
 		this.id = id;
 	}
 
+	private int getDiceRoll() {
+		int a = (int) (Math.random() * 6 + 1);
+		int b = (int) (Math.random() * 6 + 1);
+		return a + b;
+	}
+
+	private void doTurn(Player player) {
+		int roll = getDiceRoll();
+		broadcastGameState();
+		broadcastConsoleMessage("It is now " + player.getName() + "'s turn. " + player.getName() + " rolled a " + roll + ".");
+		if(roll != 7) {
+			for (CatanSpace space : board.getSpaces()) {
+				CatanBuilding building = space.getBuilding();
+				if (building != null) {
+					building.onRoll(roll);
+				}
+			}
+		} else {
+			player.moveRobber(board, buildPlayerData());
+		}
+		player.onTurn(board, buildPlayerData());
+	}
+
 	@Override
 	public void run() {
 		int first = (int) (Math.random() * 4);
@@ -149,9 +174,7 @@ public class CatanGame implements Runnable {
 		} while (cur != first);
 		while (true) {
 			for (Player player : players) {
-				broadcastGameState();
-				broadcastConsoleMessage("It is now " + player.getName() + "'s turn.");
-				player.onTurn(board, buildPlayerData());
+				doTurn(player);
 			}
 		}
 	}
