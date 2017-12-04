@@ -1,5 +1,6 @@
 package cox5529.catan.player;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import cox5529.Utility;
@@ -31,14 +32,14 @@ public class RemotePlayer extends Player {
 	public static final String RESPONSE = "RESPONSE";
 	public static final String TURN = "TURN";
 	public static final String GAMESTATE_DEV_CARDS = "DEV CARDS";
-	public static final String SETTLEMENT = "SETTLEMENT";
-	public static final String CITY = "CITY";
-	public static final String DEV_CARD = "DEV CARD";
 	public static final String KNIGHT = "KNIGHT";
 	public static final String MONOPOLY = "MONOPOLY";
 	public static final String YOP = "YOP";
 	public static final String RB = "RB";
+	public static final String PLACE = "PLACE";
+	public static final String TEAM = "TEAM";
 
+	@JsonIgnore
 	private WebSocket connection;
 	private final Queue<String> response;
 
@@ -69,12 +70,12 @@ public class RemotePlayer extends Player {
 	}
 
 	@Override
-	public void sendGameState(CatanBoard board, ArrayList<Card> hand, ArrayList<DevelopmentCard> devCards, ArrayList<PlayerData> players) {
+	public void sendGameState(CatanBoard board, Hand hand, ArrayList<DevelopmentCard> devCards, ArrayList<PlayerData> players) {
 		ObjectMapper mapper = new ObjectMapper();
 		try {
 			send(GAMESTATE + " " + GAMESTATE_BOARD, mapper.writeValueAsString(board));
 			send(GAMESTATE + " " + GAMESTATE_PLAYERS, mapper.writeValueAsString(players));
-			send(GAMESTATE + " " + GAMESTATE_HAND, mapper.writeValueAsString(hand));
+			send(GAMESTATE + " " + GAMESTATE_HAND, hand.toJSON());
 			send(GAMESTATE + " " + GAMESTATE_DEV_CARDS, mapper.writeValueAsString(devCards));
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
@@ -126,19 +127,25 @@ public class RemotePlayer extends Player {
 
 	@Override
 	public void doTurn(CatanBoard board, ArrayList<PlayerData> players) {
-		send(TURN, "");
 		while (true) {
+			sendGameState(board, hand, devCards, game.buildPlayerData());
+			send(TURN, "");
 			waitForResponse();
 			String response = this.response.poll();
 			if (response.equals(TURN)) {
 				break;
 			} else if (response.equals(DEV_CARD)) {
-				game.drawDevCard(this);
+				int res = buy(DEV_CARD);
+				if (res == 1) {
+					sendConsoleMessage("You do not have the resources to purchase a development card.");
+				} else if (res == 2) {
+					sendConsoleMessage("There are no development cards left to purchase.");
+				}
 			} else if (response.equals(KNIGHT)) {
 				boolean valid = false;
 				DevelopmentCard c = null;
 				for (DevelopmentCard card : devCards) {
-					if (card instanceof Knight) {
+					if (card instanceof Knight && !card.isGainedThisTurn()) {
 						valid = true;
 						c = card;
 						break;
@@ -149,11 +156,11 @@ public class RemotePlayer extends Player {
 				} else {
 					sendConsoleMessage("You do not have a knight card to play.");
 				}
-			} else if(response.startsWith(MONOPOLY)) {
+			} else if (response.startsWith(MONOPOLY)) {
 				boolean valid = false;
 				DevelopmentCard c = null;
 				for (DevelopmentCard card : devCards) {
-					if (card instanceof Monopoly) {
+					if (card instanceof Monopoly && !card.isGainedThisTurn()) {
 						valid = true;
 						c = card;
 						break;
@@ -164,10 +171,54 @@ public class RemotePlayer extends Player {
 				} else {
 					sendConsoleMessage("You do not have a monopoly card to play.");
 				}
+			} else if (response.startsWith(SETTLEMENT)) {
+				int res = buy(response);
+				if (res == 1) {
+					sendConsoleMessage("You cannot place a settlement there.");
+				} else if (res == 2) {
+					sendConsoleMessage("You do not have the resources to build a settlement.");
+				} else {
+					game.broadcastConsoleMessage(name + " has just built a new settlement.");
+				}
+			} else if (response.startsWith(ROAD)) {
+				int res = buy(response);
+				if (res == 1) {
+					sendConsoleMessage("You cannot place a road there.");
+				} else if (res == 2) {
+					sendConsoleMessage("You do not have the resources to build a road.");
+				} else {
+					game.broadcastConsoleMessage(name + " has just built a new road.");
+				}
 			} else {
 				Utility.log(response);
 			}
 		}
+	}
+
+	@Override
+	public void setTeam(int team) {
+		this.team = team;
+		send(TEAM, team + "");
+	}
+
+	@Override
+	public String getPlacement(CatanBoard board, ArrayList<PlayerData> players, boolean giveCards) {
+		send(PLACE, "");
+		String prefix = PLACE + " " + SETTLEMENT;
+		String re;
+		String response;
+		do {
+			waitForResponse();
+			response = this.response.poll();
+		} while (!response.startsWith(prefix));
+		re = response.substring(prefix.length() + 1);
+		prefix = PLACE + " " + ROAD;
+		do {
+			waitForResponse();
+			response = this.response.poll();
+		} while (!response.startsWith(prefix));
+		re += " " + response.substring(prefix.length() + 1);
+		return re;
 	}
 
 	@Override

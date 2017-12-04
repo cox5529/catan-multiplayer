@@ -16,6 +16,14 @@ public abstract class DevelopmentCard {
 		return name;
 	}
 
+	public boolean isGainedThisTurn() {
+		return gainedThisTurn;
+	}
+
+	public void setGainedThisTurn(boolean gainedThisTurn) {
+		this.gainedThisTurn = gainedThisTurn;
+	}
+
 	public void play(CatanGame game, Player player, String argument) {
 		game.broadcastConsoleMessage(player.getName() + " has just played a " + name + " development card!");
 		doAction(game, player, argument);

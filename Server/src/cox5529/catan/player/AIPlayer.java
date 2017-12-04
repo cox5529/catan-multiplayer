@@ -1,6 +1,5 @@
 package cox5529.catan.player;
 
-import cox5529.catan.Card;
 import cox5529.catan.CatanGame;
 import cox5529.catan.board.CatanBoard;
 import cox5529.catan.devcard.DevelopmentCard;
@@ -17,7 +16,7 @@ public class AIPlayer extends Player {
 	}
 
 	@Override
-	public void sendGameState(CatanBoard board, ArrayList<Card> hand, ArrayList<DevelopmentCard> devCards, ArrayList<PlayerData> players) {
+	public void sendGameState(CatanBoard board, Hand hand, ArrayList<DevelopmentCard> devCards, ArrayList<PlayerData> players) {
 
 	}
 
@@ -29,5 +28,17 @@ public class AIPlayer extends Player {
 	@Override
 	public void doTurn(CatanBoard board, ArrayList<PlayerData> players) {
 
+	}
+
+	@Override
+	public String getPlacement(CatanBoard board, ArrayList<PlayerData> players, boolean giveCards) {
+		int diag = (int) (Math.random() * 5 + 1);
+		int col = (int) (Math.random() * 5);
+		while(board.getTiles()[diag][col] == null) {
+			diag = (int) (Math.random() * 5 + 1);
+			col = (int) (Math.random() * 5);
+		}
+		int pos = (int) (Math.random() * 6);
+		return String.format("%d %d %d %d %d %d", diag, col, pos, diag, col, pos);
 	}
 }

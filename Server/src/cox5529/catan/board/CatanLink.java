@@ -1,12 +1,8 @@
 package cox5529.catan.board;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 public class CatanLink {
 
-	@JsonIgnore
 	private CatanSpace frontSpace;
-	@JsonIgnore
 	private CatanSpace rearSpace;
 
 	private int road;

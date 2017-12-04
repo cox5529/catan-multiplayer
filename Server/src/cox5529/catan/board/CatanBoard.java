@@ -3,6 +3,7 @@ package cox5529.catan.board;
 
 import cox5529.Utility;
 import cox5529.catan.Card;
+import cox5529.catan.board.building.CatanBuilding;
 
 import java.util.Arrays;
 
@@ -90,7 +91,6 @@ public class CatanBoard {
 									space.addTile(tile);
 									tile.getSpaces()[point[2]] = space;
 								}
-
 							}
 						} else {
 							CatanSpace space = new CatanSpace();
@@ -102,17 +102,17 @@ public class CatanBoard {
 			}
 		}
 
-		links = new CatanLink[76];
+		links = new CatanLink[72];
 		int linkIndex = 0;
 		for (int i = 0; i < tiles.length; i++) {
 			for (int j = 0; j < tiles[i].length; j++) {
 				if (tiles[i][j] != null) {
 					for (int k = 0; k < 6; k++) {
 						int hexCount = getHexCountLink(i, j, k);
-						int[][] hexes = getBorderingHexesLink(i, j, k);
 						if (hexCount > 1) {
+							int[][] hexes = getBorderingHexesLink(i, j, k);
 							boolean done = false;
-							for (int l = 1; l < hexes.length; l++) {
+							for (int l = 0; l < hexes.length; l++) {
 								if (hexes[l][0] < i || (hexes[l][0] == i && hexes[l][1] < j)) {
 									done = true;
 									break;
@@ -144,19 +144,89 @@ public class CatanBoard {
 		}
 	}
 
-	private CatanSpace findSpace(int diagonal, int column, int position) {
-		if (diagonal >= 1 && diagonal <= 5 && column >= 0 && column <= 4 && position >= 0 && position <= 6) {
+	public CatanSpace findSpace(int diagonal, int column, int position) {
+		if (diagonal >= 1 && diagonal <= 5 && column >= 0 && column <= 4 && position >= 0 && position < 6) {
 			return tiles[diagonal][column].getSpaces()[position];
 		} else {
 			return null;
 		}
 	}
 
+	public CatanLink findLink(int diagonal, int column, int position) {
+		if (diagonal >= 1 && diagonal <= 5 && column >= 0 && column <= 4 && position >= 0 && position < 6) {
+			int start;
+			int end = position;
+			if (position == 0) {
+				start = 5;
+			} else {
+				start = end - 1;
+			}
+			CatanSpace startSpace = findSpace(diagonal, column, start);
+			CatanSpace endSpace = findSpace(diagonal, column, end);
+			for (CatanLink a : startSpace.getLinks()) {
+				for (CatanLink b : endSpace.getLinks()) {
+					if (a.equals(b)) {
+						return a;
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	public boolean isValidSettlementLocation(int diag, int col, int pos, int team, boolean init) {
+		CatanSpace space = findSpace(diag, col, pos);
+		if (space != null && space.getBuilding() == null) {
+			boolean road = false;
+			for (CatanLink link : space.getLinks()) {
+				if (link.getFrontSpace() == space && link.getRearSpace().getBuilding() != null) {
+					return false;
+				} else if (link.getRearSpace() == space && link.getFrontSpace().getBuilding() != null) {
+					return false;
+				} else if (link.getRoad() == team) {
+					road = true;
+				}
+			}
+			return road || init;
+		}
+		return false;
+	}
+
+	public boolean isValidRoadLocation(int diag, int col, int pos, int team) {
+		CatanLink link = findLink(diag, col, pos);
+		CatanBuilding front = link.getFrontSpace().getBuilding();
+		CatanBuilding rear = link.getRearSpace().getBuilding();
+		if (front != null && front.getPlayer().getTeam() == team) {
+			return true;
+		}
+		if (rear != null && rear.getPlayer().getTeam() == team) {
+			return true;
+		}
+		for (CatanLink a : link.getFrontSpace().getLinks()) {
+			if (a.getRoad() == team) {
+				return true;
+			}
+		}
+		for (CatanLink a : link.getRearSpace().getLinks()) {
+			if (a.getRoad() == team) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public boolean isValidPlacementLocation(int diag, int col, int pos, int spaceDiag, int spaceCol, int spacePos) {
+		CatanLink link = findLink(diag, col, pos);
+		CatanSpace space = findSpace(spaceDiag, spaceCol, spacePos);
+		boolean road = (link.getRearSpace().equals(space) || link.getFrontSpace().equals(space));
+		boolean settlement = isValidSettlementLocation(spaceDiag, spaceCol, spacePos, 5, true);
+		return road && settlement;
+	}
+
 	private int getHexCountLink(int i, int j, int k) {
 		if (getHexCountSpace(i, j, k) == 3) return 2;
-		if (k > tiles[i][j].getExteriorStart() && k <= tiles[i][j].getExteriorEnd()) return 1;
-		if (k > tiles[i][j].getExteriorStart() || k <= tiles[i][j].getExteriorEnd()) return 1;
-		return 2;
+		if (getHexCountSpace(i, j, k == 0 ? 5 : k - 1) == 3) return 2;
+		return 1;
 	}
 
 	private int[][] getBorderingHexesLink(int i, int j, int k) {
@@ -292,32 +362,24 @@ public class CatanBoard {
 	}
 
 	private void linkElements() {
-		getLink(1, 2, 1).setPort(ports[0]);
-		getLink(2, 3, 1).setPort(ports[1]);
-		getLink(2, 3, 2).setPort(ports[2]);
-		getLink(3, 4, 2).setPort(ports[3]);
-		getLink(4, 4, 2).setPort(ports[4]);
-		getLink(4, 4, 3).setPort(ports[5]);
-		getLink(5, 4, 3).setPort(ports[6]);
-		getLink(5, 3, 3).setPort(ports[7]);
-		getLink(5, 3, 4).setPort(ports[8]);
-		getLink(5, 2, 4).setPort(ports[9]);
-		getLink(4, 1, 4).setPort(ports[10]);
-		getLink(4, 1, 5).setPort(ports[11]);
-		getLink(3, 0, 5).setPort(ports[12]);
-		getLink(2, 0, 5).setPort(ports[13]);
-		getLink(2, 0, 0).setPort(ports[14]);
-		getLink(1, 0, 0).setPort(ports[15]);
-		getLink(1, 1, 0).setPort(ports[16]);
-		getLink(1, 1, 1).setPort(ports[17]);
-	}
-
-	private CatanLink getLink(int diagonal, int column, int position) {
-		for (CatanLink link : links) {
-			if (link.getDiagonal() == diagonal && link.getColumn() == column && link.getPosition() == position)
-				return link;
-		}
-		return null;
+		findLink(1, 2, 1).setPort(ports[0]);
+		findLink(2, 3, 1).setPort(ports[1]);
+		findLink(2, 3, 2).setPort(ports[2]);
+		findLink(3, 4, 2).setPort(ports[3]);
+		findLink(4, 4, 2).setPort(ports[4]);
+		findLink(4, 4, 3).setPort(ports[5]);
+		findLink(5, 4, 3).setPort(ports[6]);
+		findLink(5, 3, 3).setPort(ports[7]);
+		findLink(5, 3, 4).setPort(ports[8]);
+		findLink(5, 2, 4).setPort(ports[9]);
+		findLink(4, 1, 4).setPort(ports[10]);
+		findLink(4, 1, 5).setPort(ports[11]);
+		findLink(3, 0, 5).setPort(ports[12]);
+		findLink(2, 0, 5).setPort(ports[13]);
+		findLink(2, 0, 0).setPort(ports[14]);
+		findLink(1, 0, 0).setPort(ports[15]);
+		findLink(1, 1, 0).setPort(ports[16]);
+		findLink(1, 1, 1).setPort(ports[17]);
 	}
 
 	private void shuffleArrays() {

@@ -59,14 +59,14 @@ public class CatanGame implements Runnable {
 		broadcastConsoleMessage(player.getName() + " has joined the game");
 	}
 
-	public void drawDevCard(Player player) {
-		DevelopmentCard card = devCardDeck.remove(0);
-		broadcastConsoleMessage(player.getName() + " has just bought a development card!");
-		if (player instanceof RemotePlayer) {
-			((RemotePlayer) player).sendConsoleMessage("You have drawn a " + card.getName() + " card.");
+	public DevelopmentCard drawDevCard(Player player) {
+		if (devCardDeck.size() == 0) {
+			return null;
 		}
-		player.getDevCards().add(card);
-		broadcastGameState();
+		DevelopmentCard card = devCardDeck.remove(0);
+		card.setGainedThisTurn(true);
+		broadcastConsoleMessage(player.getName() + " has just bought a development card!");
+		return card;
 	}
 
 	public void removePlayer(Player player, String reason) {
@@ -80,12 +80,12 @@ public class CatanGame implements Runnable {
 			p.sendGameState(board, p.getHand(), p.getDevCards(), buildPlayerData());
 	}
 
-	private ArrayList<PlayerData> buildPlayerData() {
+	public ArrayList<PlayerData> buildPlayerData() {
 		ArrayList<PlayerData> data = new ArrayList<>();
 		for (Player player : players) {
 			PlayerData pdata = new PlayerData();
 			pdata.setTeam(player.getTeam());
-			pdata.setCards(player.getHand().size());
+			pdata.setCards(player.getHand().getSize());
 			pdata.setDevCards(player.getDevCards().size());
 			pdata.setPlayedDevCards(player.getPlayedDevCards());
 			pdata.setName(player.getName());
@@ -129,10 +129,29 @@ public class CatanGame implements Runnable {
 
 	@Override
 	public void run() {
+		int first = (int) (Math.random() * 4);
+		int cur = first;
+		do {
+			Player player = players.get(cur);
+			broadcastConsoleMessage("It is now " + player.getName() + "'s turn to place.");
+			broadcastGameState();
+			player.place(board, buildPlayerData(), true);
+			cur++;
+			if (cur == 4) cur = 0;
+		} while (cur != first);
+		do {
+			cur--;
+			if (cur == -1) cur = 3;
+			Player player = players.get(cur);
+			broadcastConsoleMessage("It is now " + player.getName() + "'s turn to place.");
+			broadcastGameState();
+			player.place(board, buildPlayerData(), true);
+		} while (cur != first);
 		while (true) {
 			for (Player player : players) {
 				broadcastGameState();
-				player.doTurn(board, buildPlayerData());
+				broadcastConsoleMessage("It is now " + player.getName() + "'s turn.");
+				player.onTurn(board, buildPlayerData());
 			}
 		}
 	}

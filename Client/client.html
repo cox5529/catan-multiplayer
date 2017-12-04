@@ -6,6 +6,8 @@
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
 		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
+		<script src="constantsCatan.js"></script>
+		<script src="drawCatan.js"></script>
 		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 		<title>Test Client</title>
 	</head>
@@ -100,79 +102,25 @@
 
 
 <script>
-	
-	var NONE = "";
-	var GAMESTATE_BOARD = "STATE BOARD";
-	var GAMESTATE_PLAYERS = "STATE PLAYERS";
-	var GAMESTATE_HAND = "STATE HAND";
-	var GAMESTATE_DEV_CARDS = "STATE DEV CARDS";
-	var START_GAME = "GAME START";
-	var JOIN_GAME = "GAME JOIN";
-	var USERNAME = "USERNAME";
-	var CONSOLE = "CONSOLE";
-	var ROBBER = "ROBBER";
-	var RESPONSE = "RESPONSE"
-	var TURN = "TURN";
-	var SETTLEMENT = "SETTLEMENT";
-	var CITY = "CITY";
-	var DEV_CARD = "DEV CARD";
-	var KNIGHT = "KNIGHT";
-	var MONOPOLY = "MONOPOLY";
-	var YOP = "YOP";
-	var RB = "RB";
-	
 	var socket;
 	var state = 0;
 	var username = "Brandon";
+	var team = 0;
 	
 	var expectedMessage = NONE;
 	var board = {};
+	var hexes = [];
 	var devCards = [];
-	
-	var SHEEP_COLOR = "#a8d242";
-	var WHEAT_COLOR = "#ffd300";
-	var BRICK_COLOR = "#d77b42";
-	var STONE_COLOR = "#797979";
-	var WOOD_COLOR = "#33a642";
-	var DESERT_COLOR = "#fffdb9";
-	var WATER_COLOR = "#3daad6";
-	var NORMAL_NUMBER_COLOR = "#000000";
-	var RED_NUMBER_COLOR = "#ff0000";
-	var ROBBER_COLOR = "#7f7f7f";
-	var NUMBER_BG_COLOR = "#fff";
-	var ALL_PORT_COLOR = "#bbb";
-	var ROBBER_COLOR = "#aaa";
 	
 	var xOffsetGlobal = 0;
 	var yOffsetGlobal = 0;
 	
-	var HEX_HEIGHT = 87;
-	var HEX_WIDTH = 100;
-	var HEX_SIDE = 50;
-	
 	var lastClick = { x: -1, y: -1 };
+	var settlements = [];
+	var roads = [];
 	
 	var onInput = null;
 	var inputArg = null;
-	
-	var teams = [
-		{
-			color: "White",
-			hexColor: "#FDF6EE"
-		},
-		{
-			color: "Red",
-			hexColor: "#CC0000"
-		},
-		{
-			color: "Blue",
-			hexColor: "#2323B2"
-		},
-		{
-			color: "Orange",
-			hexColor: "#E59400"
-		}
-	];
 	
 	$(document).ready(function (){
 		socket = new WebSocket("ws://127.0.0.1:1185");
@@ -198,6 +146,10 @@
 			} else if(expectedMessage == GAMESTATE_DEV_CARDS) {
 				devCards = JSON.parse(event.data);
 				updateDevCards(devCards);
+			} else if(expectedMessage == PLACE) {
+				placeInitial();
+			} else if(expectedMessage == TEAM) {
+				team = parseInt(event.data);
 			} else {
 				console.log(event.data);
 			}
@@ -251,13 +203,13 @@
 		html += "	<td><img src='images/stone.png' class='resource-icon'/><img src='images/wheat.png' class='resource-icon'/><img src='images/sheep.png' class='resource-icon'/></td>";
 		html += "</tr>";
 		html += "<tr><td colspan='2'>";
-		if(devCards.knight > 0)
+		if(devCards.knight.playable > 0)
 			html += "	<input type='submit' class='btn btn-primary' name='action' value='Play Knight' /> ";
-		if(devCards.monopoly > 0)
+		if(devCards.monopoly.playable > 0)
 			html += "	<input type='submit' class='btn btn-primary' name='action' value='Play Monopoly' /> ";
-		if(devCards.yop > 0)
+		if(devCards.yop.playable > 0)
 			html += "	<input type='submit' class='btn btn-primary' name='action' value='Play Year of Plenty' /> ";
-		if(devCards.rb > 0)
+		if(devCards.rb.playable > 0)
 			html += "	<input type='submit' class='btn btn-primary' name='action' value='Play Road Building' /> ";
 		html += "</td></tr>";
 		html += "<tr><td colspan='2'>";
@@ -269,11 +221,11 @@
 			e.preventDefault();
 			var val = $("input[type=submit][clicked=true]").val();
 			if(val == "Build Settlement") {
-				
+				buildSettlement();
 			} else if(val == "Build City") {
 				
 			} else if(val == "Build Road") {
-				
+				buildRoad();
 			} else if(val == "Buy Development Card") {
 				socket.send(RESPONSE + " " + DEV_CARD);
 			} else if(val == "Play Knight") {
@@ -286,10 +238,123 @@
 				
 			} else if(val == "End Turn") {
 				socket.send(RESPONSE + " " + TURN);
+				updateForm("", null);
 			}
 		};
 		
 		updateForm(html, onsubmit);
+	}
+	
+	function placeInitial() {
+		showMessage("You may now place a settlement. Click where you would like to place your settlement.");
+		inputArg = board;
+		drawBoard(true, false, null, true);
+		onInput = function(x, y) {
+			var pos = calculateSpaceClicked(x, y);
+			if(pos != null && isValidSettlement({x: x, y: y}, true)) {
+				socket.send(RESPONSE + " " + PLACE + " " + SETTLEMENT + " " + pos.hex.diagonal + " " + pos.hex.column + " " + pos.space);
+				showMessage("You may now place a road. Click where you would like to place your road.");
+				inputArg = board;
+				drawBoard(false, true, pos);
+				onInput = function(x, y) {
+					var pos = calculateLinkClicked(x, y);
+					if(pos != null) {
+						drawBoard();
+						socket.send(RESPONSE + " " + PLACE + " " + ROAD + " " + pos.hex.diagonal + " " + pos.hex.column + " " + pos.link);
+					}
+				};
+			}
+		};
+	}
+	
+	function buildSettlement() {
+		showMessage("You may now place a settlement. Click where you would like to place your settlement.");
+		inputArg = board;
+		drawBoard(true);
+		onInput = function(x, y) {
+			var pos = calculateSpaceClicked(x, y);
+			if(pos != null) {
+				drawBoard();
+				socket.send(RESPONSE + " " + SETTLEMENT + " " + pos.hex.diagonal + " " + pos.hex.column + " " + pos.space);
+			}
+		};
+	}
+	
+	function buildRoad() {
+		showMessage("You may now place a road. Click where you would like to place your road.");
+		inputArg = board;
+		drawBoard(false, true);
+		onInput = function(x, y) {
+			var pos = calculateLinkClicked(x, y);
+			if(pos != null) {
+				drawBoard();
+				socket.send(RESPONSE + " " + ROAD + " " + pos.hex.diagonal + " " + pos.hex.column + " " + pos.link);
+			}
+		};
+	}
+	
+	function isValidSettlement(position, init) {
+		var twoSpaces = true;
+		var roads = false;
+		for(var i = 0; i < settlements.length; i++) {
+			var settlement = settlements[i];
+			var d = dist(position.x, position.y, settlement.x, settlement.y);
+			if(d <= HEX_SIDE + 20) {
+				return false;
+			}
+		}
+		if(!init) {
+			for(var i = 0; i < roads.length; i++) {
+				var road = roads[i];
+				if(road.team == team) {
+					var d = dist(position.x, position.y, road.start.x, road.start.y);
+					if(d <= 10) {
+						roads = true;
+						break;
+					}
+					d = dist(position.x, position.y, road.stop.x, road.stop.y);
+					if(d <= 10) {
+						roads = true;
+						break;
+					}
+				}
+			}
+		}
+		return twoSpaces && (roads || init);
+	}
+	
+	function isValidRoad(start, stop) {
+		for(var i = 0; i < roads.length; i++) {
+			road = roads[i];
+			if(road.team == team) {
+				var d = dist(start.x, start.y, road.start.x, road.start.y);
+				if(d <= 10) {
+					return true;
+				}
+				d = dist(start.x, start.y, road.stop.x, road.stop.y);
+				if(d <= 10) {
+					return true;
+				}
+				d = dist(stop.x, stop.y, road.start.x, road.start.y);
+				if(d <= 10) {
+					return true;
+				}
+				d = dist(stop.x, stop.y, road.stop.x, road.stop.y);
+				if(d <= 10) {
+					return true;
+				}
+			}
+		}
+		for(var i = 0; i < settlements.length; i++) {
+			var settlement = settlements[i];
+			var d = dist(start.x, start.y, settlement.x, settlement.y);
+			if(d <= 2 && settlement.team == team) 
+				return true;
+			d = dist(stop.x, stop.y, settlement.x, settlement.y);
+			if(d <= 2 && settlement.team == team) 
+				return true; 
+		}
+		return false;
 	}
 	
 	function doMonopoly() {
@@ -333,10 +398,13 @@
 	function placeRobber(board) {
 		showMessage("You can now move the robber. The robber may not be placed on the tile that it is already located on.");
 		inputArg = board;
-		onInput = function(coordinate) {
+		onInput = function(x, y) {
+			coordinate = calculateHexClicked(x, y);
 			var board = inputArg;
 			if(coordinate.diagonal == board.robber.diagonal && coordinate.column == board.robber.column) {
 				showMessage("You must place the robber on a tile that is not already located on.");
+			} else if(board.tiles[coordinate.diagonal][coordinate.column] == null) {
+				showMessage("You must place the robber on a valid tile.");
 			} else {
 				socket.send(RESPONSE + " " + coordinate.diagonal + " " + coordinate.column);
 				onInput = null;
@@ -350,65 +418,138 @@
 		lastClick.x = event.x - rect.left;
 		lastClick.y = event.y - rect.top;
 		
-		var coordinate = calculateHexClicked(lastClick.x, lastClick.y);
 		if(onInput != null) {
-			onInput(coordinate);
+			onInput(lastClick.x, lastClick.y);
 		}
 	}
 	
 	function calculateHexClicked(x, y) {
-		x -= xOffsetGlobal;
-		y -= yOffsetGlobal;
-		x *= 4 / 3 / HEX_WIDTH;
-		
-		var row = 0;
-		while(y > 0) {
-			y -= HEX_HEIGHT;
-			row++;
-		}
-		row--;
-		y += HEX_HEIGHT;
-		var xMod = x % 1;
-		var eq1 = 2.0 * HEX_HEIGHT / HEX_WIDTH * xMod * HEX_WIDTH;
-		var eq2 = -2.0 * HEX_HEIGHT / HEX_WIDTH * xMod * HEX_WIDTH + HEX_HEIGHT;
-		if(xMod >= 0.25) {
-			
-		} else if(eq1 < y && y < eq2) {
-			if(xMod < 0.25)
-				x -= 1;
-		}
-		x = Math.trunc(x);
-		
-		if(x % 2 == 1) {
-			if(y > HEX_HEIGHT / 2) {
-				row += 0.5;
-			} else {
-				row -= 0.5;
+		for(var i = 0; i < hexes.length; i++) {
+			for(var j = 0; j < hexes[i].length; j++) {
+				var hex = hexes[i][j];
+				if(hex != null) {
+					if(hex.first[0] <= x && hex.first[1] <= y && hex.last[0] > x && hex.last[1] > y) {
+						if(isPointInPolygon(x, y, hex.points)) {
+							return hex;
+						}
+					}
+				}
 			}
 		}
-		var diag = row + x / 2;
-		return {"column": x, "diagonal": diag};
+		return null;
+	}
+	
+	function isPointInPolygon(x, y, polygon) {
+		var count = 0;
+		for(var i = 0; i < polygon.length - 1; i++) {
+			count += doSegmentsIntersect([[x, y], [99999, 99999]], [polygon[i], polygon[i + 1]]);
+		}
+		count += doSegmentsIntersect([[x, y], [99999, 99999]], [polygon[5], polygon[0]]);
+		return (count % 2 == 1);
+	}
+	
+	function doSegmentsIntersect(a, b) {
+		var x1 = a[0][0];
+		var y1 = a[0][1];
+		var x2 = a[1][0];
+		var y2 = a[1][1];
+		var x3 = b[0][0];
+		var y3 = b[0][1];
+		var x4 = b[1][0];
+		var y4 = b[1][1];
+
+		var m1 = (y1 - y2) / (x1 - x2);
+		var m2 = (y3 - y4) / (x3 - x4);
+		
+		var x = (m1 * x1 - y1 - m2 * x3 + y3) / (m1 - m2);
+		if((x1 <= x && x <= x2) || (x2 <= x && x <= x1)) {
+			if((x3 <= x && x <= x4) || (x4 <= x && x <= x3)) {
+				return 1;
+			}
+		}
+		return 0;
+	}
+	
+	function dist(x1, y1, x2, y2) {
+		return Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+	}
+	
+	function calculateSpaceClicked(x, y) {
+		var hex = calculateHexClicked(x, y);
+		if(hex != null) {
+			var diag = hex.diagonal;
+			var col = hex.column;
+			
+			for(var i = 0; i < hex.points.length; i++) {
+				var point = hex.points[i];
+				var d = dist(x, y, point[0], point[1]);
+				if(d < 15) {
+					return {hex: hex, space: i};
+				}
+			}
+		}
+		return null;
+	}
+	
+	function calculateLinkClicked(x, y) {
+		var hex = calculateHexClicked(x, y);
+		if(hex != null) {
+			for(var i = 1; i < hex.points.length; i++) {
+				if(linePointDistance(x, y, hex.points[i - 1], hex.points[i]) < 10) {
+					return {hex: hex, link: i};
+				}
+			}
+			if(linePointDistance(x, y, hex.points[5], hex.points[0]) < 10) {
+				return {hex: hex, link: 0};
+			}
+		}
+		return null;
+	}
+	
+	function linePointDistance(x, y, p1, p2) {
+		var x1 = p1[0];
+		var y1 = p1[1];
+		var x2 = p2[0];
+		var y2 = p2[1];
+		
+		return Math.abs(x * (y2 - y1) - y * (x2 - x1) + x2 * y1 - y2 * x1)/ dist(x1, y1, x2, y2);
 	}
 
 	function countDevCards() {
-		var monopoly = 0;
-		var yop = 0;
-		var rb = 0;
-		var knight = 0;
-		var vp = 0;
+		var monopoly = {playable: 0, unplayable: 0};
+		var yop = {playable: 0, unplayable: 0};
+		var rb = {playable: 0, unplayable: 0};
+		var knight = {playable: 0, unplayable: 0};
+		var vp = {playable: 0, unplayable: 0};
 		
 		for(var i = 0; i < devCards.length; i++) {
-			var card = devCards[i].name;
-			if(card == "Monopoly") {
-				monopoly++;
-			} else if(card == "Knight") {
-				knight++;
-			} else if(card == "Year of plenty") {
-				yop++;
-			} else if(card == "Road building") {
-				rb++;
+			var card = devCards[i];
+			if(card.name == "Monopoly") {
+				if(card.gainedThisTurn) {
+					monopoly.unplayable++;
+				} else {
+					monopoly.playable++;
+				}
+			} else if(card.name == "Knight") {
+				if(card.gainedThisTurn) {
+					knight.unplayable++;
+				} else {
+					knight.playable++;
+				}
+			} else if(card.name == "Year of plenty") {
+				if(card.gainedThisTurn) {
+					yop.unplayable++;
+				} else {
+					yop.playable++;
+				}
+			} else if(card.name == "Road building") {
+				if(card.gainedThisTurn) {
+					rb.unplayable++;
+				} else {
+					rb.playable++;
+				}
 			} else {
-				vp++;
+				vp.playable++;
 			}
 		}
 		return {monopoly: monopoly, yop: yop, rb: rb, knight: knight, vp: vp};
@@ -417,39 +558,27 @@
 	function updateDevCards() {
 		var cards = countDevCards();
 		
-		$("#monopoly-amt").html(cards.monopoly);
-		$("#yop-amt").html(cards.yop);
-		$("#rb-amt").html(cards.rb);
-		$("#knight-amt").html(cards.knight);
-		$("#vp-amt").html(cards.vp);
+		$("#monopoly-amt").html(getCardString(cards.monopoly));
+		$("#yop-amt").html(getCardString(cards.yop));
+		$("#rb-amt").html(getCardString(cards.rb));
+		$("#knight-amt").html(getCardString(cards.knight));
+		$("#vp-amt").html(getCardString(cards.vp));
 	}
 	
-	function updateHand(hand) {
-		var brick = 0;
-		var stone = 0;
-		var wheat = 0;
-		var sheep = 0;
-		var wood = 0;
-		
-		for(var i = 0; i<hand.length; i++) {
-			var card = hand[i];
-			if(card == "Brick")
-				brick++;
-			else if(card == "Stone")
-				stone++;
-			else if(card == "Wheat")
-				wheat++;
-			else if(card == "Sheep")
-				sheep++;
-			else
-				wood++;
+	function getCardString(card) {
+		var re = "" + card.playable;
+		if(card.unplayable != 0) {
+			re += " (" + card.unplayable + ")";
 		}
-		
-		$("#wood-amt").html(wood);
-		$("#sheep-amt").html(sheep);
-		$("#wheat-amt").html(wheat);
-		$("#stone-amt").html(stone);
-		$("#brick-amt").html(brick);
+		return re;
+	}
+	
+	function updateHand(hand) {		
+		$("#wood-amt").html(hand.wood);
+		$("#sheep-amt").html(hand.sheep);
+		$("#wheat-amt").html(hand.wheat);
+		$("#stone-amt").html(hand.stone);
+		$("#brick-amt").html(hand.brick);
 	}
 	
 	function updatePlayers(players) {
@@ -469,272 +598,5 @@
 		$("#console").append("<div>"+message+"</div><br / >");
 		$("#console").stop().animate({scrollTop: $("#console")[0].scrollHeight}, 1000);
 		console.log(message);
-	}
-	
-	function drawBoard() {
-		var canvas = $("#board")[0].getContext('2d');
-		canvas.fillStyle = WATER_COLOR;
-		canvas.fillRect(0, 0, 600, 600);
-	
-		drawHexes(canvas, board.tiles);
-		drawLinks(canvas, board.links);
-		drawPorts(canvas, board.ports);
-		drawRobber(canvas, board.robber);
-	}
-	
-	function drawHexes(canvas, tiles) {
-		for(var i = 0; i < tiles.length; i++) {
-			for(var j = 0; j < tiles[i].length; j++) {
-				if(tiles[i][j] != null) {
-					if(tiles[i][j].resource == "Wheat") {
-						canvas.fillStyle = WHEAT_COLOR;
-					} else if(tiles[i][j].resource == "Sheep") {
-						canvas.fillStyle = SHEEP_COLOR;
-					} else if(tiles[i][j].resource == "Stone") {
-						canvas.fillStyle = STONE_COLOR;
-					} else if(tiles[i][j].resource == "Brick") {
-						canvas.fillStyle = BRICK_COLOR;
-					} else if(tiles[i][j].resource == "Wood") {
-						canvas.fillStyle = WOOD_COLOR;
-					} else if(tiles[i][j].resource == "None") {
-						canvas.fillStyle = DESERT_COLOR;
-					} 
-					var xOffset = j * HEX_WIDTH * 3 / 4;
-					var yOffset = i * HEX_HEIGHT - j * HEX_HEIGHT / 2;
-					
-					canvas.beginPath();
-					var x = xOffset + xOffsetGlobal + HEX_WIDTH / 4;
-					var y = yOffset + yOffsetGlobal;
-					canvas.moveTo(x, y);
-					x += HEX_WIDTH / 2;
-					canvas.lineTo(x, y);
-					x += HEX_WIDTH / 4;
-					y += HEX_HEIGHT / 2;
-					canvas.lineTo(x, y);
-					x -= HEX_WIDTH / 4;
-					y += HEX_HEIGHT / 2;
-					canvas.lineTo(x, y);
-					x -= HEX_WIDTH / 2;
-					canvas.lineTo(x, y);
-					x -= HEX_WIDTH / 4;
-					y -= HEX_HEIGHT / 2;
-					canvas.lineTo(x, y);
-					
-					canvas.closePath();
-					canvas.fill();
-					
-					canvas.strokeStyle = "#000";
-					canvas.beginPath();
-					x = xOffset + xOffsetGlobal + HEX_WIDTH / 4;
-					y = yOffset + yOffsetGlobal;
-					canvas.moveTo(x, y);
-					x += HEX_WIDTH / 2;
-					canvas.lineTo(x, y);
-					x += HEX_WIDTH / 4;
-					y += HEX_HEIGHT / 2;
-					canvas.lineTo(x, y);
-					x -= HEX_WIDTH / 4;
-					y += HEX_HEIGHT / 2;
-					canvas.lineTo(x, y);
-					x -= HEX_WIDTH / 2;
-					canvas.lineTo(x, y);
-					x -= HEX_WIDTH / 4;
-					y -= HEX_HEIGHT / 2;
-					canvas.lineTo(x, y);
-					
-					canvas.closePath();
-					canvas.stroke();
-					
-					drawSpaces(canvas, tiles[i][j], j, i);
-					
-					if(tiles[i][j].resource != "None") {
-						var horizontalOffset = xOffset + xOffsetGlobal + HEX_WIDTH / 2;
-						var verticalOffset = yOffset + yOffsetGlobal + HEX_HEIGHT / 2
-						
-						canvas.fillStyle = NUMBER_BG_COLOR;
-						canvas.beginPath();
-						canvas.arc(horizontalOffset, verticalOffset, 20, 0, 2 * Math.PI);
-						canvas.fill();
-						
-						
-						canvas.font = "20px Arial";
-						if(tiles[i][j].roll == 6 || tiles[i][j].roll == 8) {
-							canvas.fillStyle = RED_NUMBER_COLOR;
-						} else {
-							canvas.fillStyle = NORMAL_NUMBER_COLOR;
-						}
-						var textWidth = canvas.measureText(tiles[i][j].roll).width;
-						canvas.fillText(tiles[i][j].roll, horizontalOffset - textWidth / 2, verticalOffset + 7);
-					}
-				}
-			}
-		}
-	}
-	
-	function drawSpaces(canvas, tile, column, diagonal) {
-		var spaces = tile.spaces;
-		for(var i = 0; i < spaces.length; i++) {
-			var space = spaces[i];
-			if(space.building != null) {
-				var x = xOffsetGlobal + column * HEX_WIDTH * 3 / 4 + HEX_WIDTH / 4;
-				var y = yOffsetGlobal + diagonal * HEX_HEIGHT - column * HEX_HEIGHT / 2;
-				
-				if(i >= 1) {
-					x += HEX_WIDTH / 2;
-				}
-				if(i >= 2) {
-					x += HEX_WIDTH / 4;
-					y += HEX_HEIGHT / 2;
-				}
-				if(i >= 3) {
-					x -= HEX_WIDTH / 4;
-					y += HEX_HEIGHT / 2;
-				}
-				if(i >= 4) {
-					x -= HEX_WIDTH / 2;
-				}
-				if(i >= 5) {
-					x -= HEX_WIDTH / 4;
-					y -= HEX_HEIGHT / 2;
-				}
-				canvas.fillStyle = "#000";
-				canvas.beginPath();
-				canvas.arc(x, y, 10, 0, 2 * Math.PI);
-				canvas.closePath();
-				canvas.fill();
-			}
-		}
-	}
-	
-	function drawLinks(canvas, links) {
-		for(var i = 0; i < links.length; i++) {
-			var x = [];
-			var y = [];
-			x.push(xOffsetGlobal + links[i].column * HEX_WIDTH * 3 / 4 + HEX_WIDTH / 4);
-			x.push(xOffsetGlobal + links[i].column * HEX_WIDTH * 3 / 4 + HEX_WIDTH * 3 / 4);
-			x.push(xOffsetGlobal + links[i].column * HEX_WIDTH * 3 / 4 + HEX_WIDTH);
-			x.push(xOffsetGlobal + links[i].column * HEX_WIDTH * 3 / 4 + HEX_WIDTH * 3 / 4);
-			x.push(xOffsetGlobal + links[i].column * HEX_WIDTH * 3 / 4 + HEX_WIDTH / 4);
-			x.push(xOffsetGlobal + links[i].column * HEX_WIDTH * 3 / 4);
-			
-			y.push(yOffsetGlobal + links[i].diagonal * HEX_HEIGHT - links[i].column * HEX_HEIGHT / 2);
-			y.push(yOffsetGlobal + links[i].diagonal * HEX_HEIGHT - links[i].column * HEX_HEIGHT / 2);
-			y.push(yOffsetGlobal + links[i].diagonal * HEX_HEIGHT - links[i].column * HEX_HEIGHT / 2 + HEX_HEIGHT / 2);
-			y.push(yOffsetGlobal + links[i].diagonal * HEX_HEIGHT - links[i].column * HEX_HEIGHT / 2 + HEX_HEIGHT);
-			y.push(yOffsetGlobal + links[i].diagonal * HEX_HEIGHT - links[i].column * HEX_HEIGHT / 2 + HEX_HEIGHT);
-			y.push(yOffsetGlobal + links[i].diagonal * HEX_HEIGHT - links[i].column * HEX_HEIGHT / 2 + HEX_HEIGHT / 2);
-			
-			var idx1 = links[i].position - 1;
-			if(idx1 < 0) idx1 += 6;
-			var idx2 = links[i].position;
-			
-			if(links[i].road != -1) {
-				canvas.lineWidth = 5;
-				canvas.beginPath();
-				canvas.moveTo(x[idx1], y[idx1]);
-				canvas.lineTo(x[idx2], y[idx2]);
-				canvas.closePath();
-				canvas.stroke();
-			}
-		}
-	}
-
-	function drawPorts(canvas, ports) {
-		for(var i = 0; i < ports.length; i++) {
-			var port = ports[i];
-			
-			if(port != null && port.link != null) {
-				var lin = port.link;
-				var x = [];
-				var y = [];
-				x.push(xOffsetGlobal + lin.column * HEX_WIDTH * 3 / 4 + HEX_WIDTH / 4);
-				x.push(xOffsetGlobal + lin.column * HEX_WIDTH * 3 / 4 + HEX_WIDTH * 3 / 4);
-				x.push(xOffsetGlobal + lin.column * HEX_WIDTH * 3 / 4 + HEX_WIDTH);
-				x.push(xOffsetGlobal + lin.column * HEX_WIDTH * 3 / 4 + HEX_WIDTH * 3 / 4);
-				x.push(xOffsetGlobal + lin.column * HEX_WIDTH * 3 / 4 + HEX_WIDTH / 4);
-				x.push(xOffsetGlobal + lin.column * HEX_WIDTH * 3 / 4);
-				
-				y.push(yOffsetGlobal + lin.diagonal * HEX_HEIGHT - lin.column * HEX_HEIGHT / 2);
-				y.push(yOffsetGlobal + lin.diagonal * HEX_HEIGHT - lin.column * HEX_HEIGHT / 2);
-				y.push(yOffsetGlobal + lin.diagonal * HEX_HEIGHT - lin.column * HEX_HEIGHT / 2 + HEX_HEIGHT / 2);
-				y.push(yOffsetGlobal + lin.diagonal * HEX_HEIGHT - lin.column * HEX_HEIGHT / 2 + HEX_HEIGHT);
-				y.push(yOffsetGlobal + lin.diagonal * HEX_HEIGHT - lin.column * HEX_HEIGHT / 2 + HEX_HEIGHT);
-				y.push(yOffsetGlobal + lin.diagonal * HEX_HEIGHT - lin.column * HEX_HEIGHT / 2 + HEX_HEIGHT / 2);
-				
-				var idx1 = lin.position - 1;
-				if(idx1 < 0) idx1 += 6;
-				var idx2 = lin.position;
-				
-				var mX = (x[idx1] + x[idx2]) / 2;
-				var mY = (y[idx1] + y[idx2]) / 2;
-				var slope = -(x[idx1] - x[idx2]) / (y[idx1] - y[idx2]);
-				var dx = HEX_SIDE / Math.sqrt(1 + slope * slope);
-				if(lin.position == 5 || lin.position == 0) {
-					dx *= -1;
-				}
-				var dy = slope * dx;
-				
-				var portX = mX + dx;
-				var portY = mY + dy;
-				if(slope == Infinity) {
-					portX = mX;
-					portY = mY - HEX_SIDE;
-				} else if(slope == -1 * Infinity) {
-					portX = mX;
-					portY = mY + HEX_SIDE;
-				}
-				
-				canvas.beginPath();
-				canvas.moveTo(x[idx1], y[idx1]);
-				canvas.lineTo(portX, portY);
-				canvas.moveTo(x[idx1], y[idx1]);
-				canvas.closePath();
-				canvas.stroke();
-				
-				canvas.beginPath();
-				canvas.moveTo(x[idx2], y[idx2]);
-				canvas.lineTo(portX, portY);
-				canvas.moveTo(x[idx2], y[idx2]);
-				canvas.closePath();
-				canvas.stroke();
-				
-				if(port.type == "Wheat") {
-					canvas.fillStyle = WHEAT_COLOR;
-				} else if(port.type == "Sheep") {
-					canvas.fillStyle = SHEEP_COLOR;
-				} else if(port.type == "Stone") {
-					canvas.fillStyle = STONE_COLOR;
-				} else if(port.type == "Brick") {
-					canvas.fillStyle = BRICK_COLOR;
-				} else if(port.type == "Wood") {
-					canvas.fillStyle = WOOD_COLOR;
-				} else if(port.type == "All") {
-					canvas.fillStyle = ALL_PORT_COLOR;
-				}
-				canvas.beginPath();
-				canvas.moveTo(portX, portY);
-				canvas.arc(portX, portY, 10, 0, Math.PI * 2);
-				canvas.closePath();
-				canvas.fill();
-				canvas.moveTo(portX, portY);
-				canvas.beginPath();
-				canvas.arc(portX, portY, 10, 0, Math.PI * 2);
-				canvas.closePath();
-				canvas.stroke();
-			}
-		}
-	}
-
-	function drawRobber(canvas, robber) {
-		var xOffset = robber.column * HEX_WIDTH * 3 / 4;
-		var yOffset = robber.diagonal * HEX_HEIGHT - robber.column * HEX_HEIGHT / 2;
-		var x = xOffset + xOffsetGlobal + HEX_WIDTH / 2;
-		var y = yOffset + yOffsetGlobal + HEX_HEIGHT / 2;
-		
-		canvas.fillStyle = ROBBER_COLOR;
-		canvas.beginPath();
-		canvas.arc(x, y, 20, 0, Math.PI * 2);
-		canvas.closePath();
-		canvas.fill();
 	}
 </script>
