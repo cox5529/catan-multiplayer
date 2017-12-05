@@ -329,6 +329,7 @@ public abstract class Player {
 				devCards.remove(card);
 				playedDevCards.add(card);
 				game.broadcastGameState();
+				for (DevelopmentCard dc : devCards) dc.setGainedThisTurn(true);
 			}
 		} else if (this instanceof RemotePlayer) {
 			((RemotePlayer) this).sendConsoleMessage("You do not have a " + card.getName() + " card to play.");

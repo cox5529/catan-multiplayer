@@ -258,6 +258,10 @@ public class CatanGame implements Runnable {
 					game = false;
 					break;
 				}
+				try {
+					Thread.sleep(500);
+				} catch (Exception e) {
+				}
 			}
 		}
 	}
