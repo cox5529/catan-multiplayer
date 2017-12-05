@@ -4,10 +4,7 @@ package cox5529.catan.player;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import cox5529.catan.Card;
 import cox5529.catan.CatanGame;
-import cox5529.catan.board.CatanBoard;
-import cox5529.catan.board.CatanLink;
-import cox5529.catan.board.CatanPort;
-import cox5529.catan.board.CatanSpace;
+import cox5529.catan.board.*;
 import cox5529.catan.board.building.CatanBuilding;
 import cox5529.catan.board.building.City;
 import cox5529.catan.board.building.Settlement;
@@ -96,6 +93,12 @@ public abstract class Player {
 			link.setRoad(team);
 			roads.add(link);
 			buildSettlement(spaceDiag, spaceCol, spaceId);
+			CatanSpace space = board.findSpace(spaceDiag, spaceCol, spaceId);
+			for (CatanTile tile : space.getTiles()) {
+				if (tile.getResource() != Card.None) {
+					hand.addCard(tile.getResource());
+				}
+			}
 		} else {
 			place(board, players, giveCards);
 		}
