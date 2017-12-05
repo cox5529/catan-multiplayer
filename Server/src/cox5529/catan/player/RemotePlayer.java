@@ -356,7 +356,7 @@ public class RemotePlayer extends Player {
 		waitForResponse();
 		String response = this.response.poll();
 		if (response.startsWith(ROBBER_DISCARD + "")) {
-			String[] data = response.substring(3).split(" ");
+			String[] data = response.split(" ");
 			int[] re = new int[5];
 			for (int i = 0; i < 5; i++) {
 				re[i] = Integer.parseInt(data[i]);

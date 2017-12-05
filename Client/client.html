@@ -262,7 +262,7 @@
 				params += $("#wheat-give-amt").html() + " ";
 				params += $("#stone-give-amt").html() + " ";
 				params += $("#brick-give-amt").html();
-				socket.send(RESPONSE + "" + DISCARD + "" + params);
+				socket.send(RESPONSE + "" + ROBBER_DISCARD + "" + params);
 				updateForm("", null);
 			}
 		};

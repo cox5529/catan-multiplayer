@@ -272,9 +272,9 @@ public abstract class Player {
 		} else if (type == TURN_CITY) {
 			if (hand.getCount(Card.Wheat) >= 2 && hand.getCount(Card.Stone) >= 3) {
 				String[] data = object.split(" ");
-				int diag = Integer.parseInt(data[1]);
-				int col = Integer.parseInt(data[2]);
-				int spaceId = Integer.parseInt(data[3]);
+				int diag = Integer.parseInt(data[0]);
+				int col = Integer.parseInt(data[1]);
+				int spaceId = Integer.parseInt(data[2]);
 				if (game.getBoard().isValidCityLocation(diag, col, spaceId, team)) {
 					CatanSpace space = game.getBoard().findSpace(diag, col, spaceId);
 					Settlement settlement = (Settlement) space.getBuilding();
