@@ -15,10 +15,40 @@ public class CatanSpace {
 	private CatanBuilding building;
 	@JsonIgnore
 	private CatanPort port;
+	@JsonIgnore
+	private int diagonal;
+	@JsonIgnore
+	private int column;
+	@JsonIgnore
+	private int position;
 
 	public CatanSpace() {
 		links = new ArrayList<>();
 		tiles = new ArrayList<>();
+	}
+
+	public int getDiagonal() {
+		return diagonal;
+	}
+
+	public void setDiagonal(int diagonal) {
+		this.diagonal = diagonal;
+	}
+
+	public int getColumn() {
+		return column;
+	}
+
+	public void setColumn(int column) {
+		this.column = column;
+	}
+
+	public int getPosition() {
+		return position;
+	}
+
+	public void setPosition(int position) {
+		this.position = position;
 	}
 
 	public CatanPort getPort() {

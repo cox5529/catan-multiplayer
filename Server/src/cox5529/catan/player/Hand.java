@@ -25,7 +25,7 @@ public class Hand {
 	}
 
 	public void addCard(Card card) {
-		if(hand.containsKey(card)) {
+		if (hand.containsKey(card)) {
 			hand.put(card, hand.get(card) + 1);
 		}
 	}
@@ -68,7 +68,8 @@ public class Hand {
 				removeCard(re);
 				return re;
 			}
-		} return Card.None;
+		}
+		return Card.None;
 	}
 
 	public void clear() {
@@ -87,6 +88,15 @@ public class Hand {
 		if (input == 3) return Card.Stone;
 		if (input == 4) return Card.Brick;
 		return Card.None;
+	}
+
+	public static int cardToInt(Card card) {
+		if (card == Card.Wood) return 0;
+		if (card == Card.Sheep) return 1;
+		if (card == Card.Wheat) return 2;
+		if (card == Card.Stone) return 3;
+		if (card == Card.Brick) return 4;
+		return -1;
 	}
 
 	public String toJSON() {

@@ -95,6 +95,9 @@ public class CatanBoard {
 							}
 							if (!done) {
 								CatanSpace space = new CatanSpace();
+								space.setDiagonal(i);
+								space.setColumn(j);
+								space.setPosition(k);
 								for (int[] point : hexes) {
 									CatanTile tile = getTile(point[0], point[1]);
 									space.addTile(tile);
@@ -104,6 +107,9 @@ public class CatanBoard {
 							}
 						} else {
 							CatanSpace space = new CatanSpace();
+							space.setDiagonal(i);
+							space.setColumn(j);
+							space.setPosition(k);
 							space.addTile(tiles[i][j]);
 							tiles[i][j].getSpaces()[k] = space;
 							spaces.add(space);
@@ -187,6 +193,23 @@ public class CatanBoard {
 
 	public boolean isValidSettlementLocation(int diag, int col, int pos, int team, boolean init) {
 		CatanSpace space = findSpace(diag, col, pos);
+		if (space != null && space.getBuilding() == null) {
+			boolean road = false;
+			for (CatanLink link : space.getLinks()) {
+				if (link.getFrontSpace() == space && link.getRearSpace().getBuilding() != null) {
+					return false;
+				} else if (link.getRearSpace() == space && link.getFrontSpace().getBuilding() != null) {
+					return false;
+				} else if (link.getRoad() == team) {
+					road = true;
+				}
+			}
+			return road || init;
+		}
+		return false;
+	}
+
+	public boolean isValidSettlementLocation(CatanSpace space, int team, boolean init) {
 		if (space != null && space.getBuilding() == null) {
 			boolean road = false;
 			for (CatanLink link : space.getLinks()) {
@@ -467,6 +490,35 @@ public class CatanBoard {
 
 	public void moveRobber(int diagonal, int column) {
 		robber.setTile(tiles[diagonal][column], diagonal, column);
+	}
+
+	public static int getRollCount(int roll) {
+		switch(roll) {
+			case 2:
+				return 1;
+			case 3:
+				return 2;
+			case 4:
+				return 3;
+			case 5:
+				return 4;
+			case 6:
+				return 5;
+			case 7:
+				return 6;
+			case 8:
+				return 5;
+			case 9:
+				return 4;
+			case 10:
+				return 3;
+			case 11:
+				return 2;
+			case 12:
+				return 5;
+			default:
+				return 0;
+		}
 	}
 
 	public static CatanBoard generate() {
