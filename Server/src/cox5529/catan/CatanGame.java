@@ -13,7 +13,6 @@ import cox5529.catan.player.PlayerData;
 import cox5529.catan.player.RemotePlayer;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 
 public class CatanGame implements Runnable {
@@ -22,6 +21,9 @@ public class CatanGame implements Runnable {
 	private int id;
 	private ArrayList<Player> players;
 	private ArrayList<DevelopmentCard> devCardDeck;
+
+	private Player longestRoad;
+	private Player largestArmy;
 
 	public CatanGame() {
 		board = CatanBoard.generate();
@@ -121,7 +123,7 @@ public class CatanGame implements Runnable {
 		board.moveRobber(robberPos[0], robberPos[1]);
 		broadcastGameState();
 		broadcastConsoleMessage(player.getName() + " has moved the robber!");
-		if(robberPos[2] != -1) {
+		if (robberPos[2] != -1) {
 			Player stolen = players.get(robberPos[2]);
 			Card c = stolen.getHand().removeRandomCard();
 			player.getHand().addCard(c);
@@ -202,6 +204,13 @@ public class CatanGame implements Runnable {
 		player.onTurn(board, buildPlayerData());
 	}
 
+	public int countPoints(Player player) {
+		int vp = player.countVictoryPoints();
+		if (player == longestRoad) vp += 2;
+		if (player == largestArmy) vp += 2;
+		return vp;
+	}
+
 	@Override
 	public void run() {
 		int first = (int) (Math.random() * 4);
@@ -222,9 +231,29 @@ public class CatanGame implements Runnable {
 			broadcastGameState();
 			player.place(board, buildPlayerData(), true);
 		} while (cur != first);
-		while (true) {
+		boolean game = true;
+		while (game) {
 			for (Player player : players) {
 				doTurn(player);
+				int roadLen = player.calculateRoadLength();
+				if (roadLen >= 5) {
+					if (longestRoad == null) longestRoad = player;
+					else if (roadLen > longestRoad.calculateRoadLength()) {
+						longestRoad = player;
+					}
+				}
+				int armySize = player.getArmySize();
+				if (armySize >= 3) {
+					if (largestArmy == null) largestArmy = player;
+					else if (armySize > largestArmy.getArmySize()) largestArmy = player;
+				}
+				int vp = countPoints(player);
+				if (vp >= 10) {
+					broadcastConsoleMessage(player.getName() + " has won the game with " + vp + " victory points!");
+					broadcastGameState();
+					game = false;
+					break;
+				}
 			}
 		}
 	}

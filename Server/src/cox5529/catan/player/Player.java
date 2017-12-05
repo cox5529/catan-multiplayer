@@ -11,11 +11,13 @@ import cox5529.catan.board.CatanSpace;
 import cox5529.catan.board.building.CatanBuilding;
 import cox5529.catan.board.building.City;
 import cox5529.catan.board.building.Settlement;
-import cox5529.catan.devcard.*;
-import org.java_websocket.WebSocket;
+import cox5529.catan.devcard.DevelopmentCard;
+import cox5529.catan.devcard.Knight;
+import cox5529.catan.devcard.RoadBuilding;
+import cox5529.catan.devcard.VictoryPoint;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Collections;
 
 public abstract class Player {
 
@@ -37,12 +39,15 @@ public abstract class Player {
 	protected ArrayList<DevelopmentCard> playedDevCards;
 	@JsonIgnore
 	protected ArrayList<CatanBuilding> buildings;
+	@JsonIgnore
+	protected ArrayList<CatanLink> roads;
 
 	public Player() {
 		hand = new Hand();
 		devCards = new ArrayList<>();
 		playedDevCards = new ArrayList<>();
 		buildings = new ArrayList<>();
+		roads = new ArrayList<>();
 		name = "";
 	}
 
@@ -89,6 +94,7 @@ public abstract class Player {
 		if (board.isValidPlacementLocation(linkDiag, linkCol, linkId, spaceDiag, spaceCol, spaceId)) {
 			CatanLink link = board.findLink(linkDiag, linkCol, linkId);
 			link.setRoad(team);
+			roads.add(link);
 			buildSettlement(spaceDiag, spaceCol, spaceId);
 		} else {
 			place(board, players, giveCards);
@@ -254,6 +260,7 @@ public abstract class Player {
 				if (game.getBoard().isValidRoadLocation(diag, col, linkId, team)) {
 					CatanLink link = game.getBoard().findLink(diag, col, linkId);
 					link.setRoad(team);
+					roads.add(link);
 					hand.removeCard(Card.Brick);
 					hand.removeCard(Card.Wood);
 					return 0;
@@ -325,8 +332,71 @@ public abstract class Player {
 		}
 	}
 
+	public final int calculateRoadLength() {
+		int longest = -1;
+		for (CatanLink link : roads) {
+			int size = getLongestRoadFromSegment(link, null);
+			if (size > longest) longest = size;
+		}
+		return longest;
+	}
+
+	private int getLongestRoadFromSegment(CatanLink link, ArrayList<CatanLink> road) {
+		if (road == null) road = new ArrayList<>();
+		if (!road.contains(link)) {
+			road.add(link);
+			CatanSpace front = link.getFrontSpace();
+			CatanSpace rear = link.getRearSpace();
+			ArrayList<Integer> possible = new ArrayList<>();
+			if (front.getBuilding() == null || front.getBuilding().getPlayer().getTeam() == team) {
+				for (CatanLink l : front.getLinks()) {
+					if (l != link && link.getRoad() == team) {
+						ArrayList<CatanLink> r = new ArrayList<>();
+						r.addAll(road);
+						possible.add(getLongestRoadFromSegment(l, r));
+					}
+				}
+			} else if (rear.getBuilding() == null || rear.getBuilding().getPlayer().getTeam() == team) {
+				for (CatanLink l : rear.getLinks()) {
+					if (l != link && link.getRoad() == team) {
+						ArrayList<CatanLink> r = new ArrayList<>();
+						r.addAll(road);
+						possible.add(getLongestRoadFromSegment(l, r));
+					}
+				}
+			}
+			Collections.sort(possible);
+			if (possible.size() == 0) return road.size();
+			return possible.get(possible.size() - 1);
+		} else return road.size();
+	}
+
+	public final int getArmySize() {
+		int count = 0;
+		for (DevelopmentCard card : playedDevCards) {
+			if (card instanceof Knight) count++;
+		}
+		return count;
+	}
+
+	public final int countVictoryPoints() {
+		int vp = 0;
+		for (DevelopmentCard card : devCards) {
+			if (card instanceof VictoryPoint) vp++;
+		}
+		for (CatanBuilding building : buildings) {
+			if (building instanceof Settlement) vp++;
+			else if (building instanceof City) vp += 2;
+		}
+		return vp;
+	}
+
 	public ArrayList<CatanBuilding> getBuildings() {
 		return buildings;
+	}
+
+	public ArrayList<CatanLink> getRoads() {
+		return roads;
 	}
 
 	public int getTeam() {

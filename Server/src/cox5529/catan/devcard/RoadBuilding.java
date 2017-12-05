@@ -20,8 +20,10 @@ public class RoadBuilding extends DevelopmentCard {
 		if (game.getBoard().isValidRoadLocation(data[0], data[1], data[2], player.getTeam()) && game.getBoard().isValidRoadLocation(data[3], data[4], data[5], data[0], data[1], data[2], player.getTeam())) {
 			CatanLink link = game.getBoard().findLink(data[0], data[1], data[2]);
 			link.setRoad(player.getTeam());
+			player.getRoads().add(link);
 			link = game.getBoard().findLink(data[3], data[4], data[5]);
 			link.setRoad(player.getTeam());
+			player.getRoads().add(link);
 			return true;
 		}
 		return false;
