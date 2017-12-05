@@ -16,7 +16,7 @@ public class Settlement extends CatanBuilding {
 	public void onRoll(int roll) {
 		ArrayList<CatanTile> tiles = space.getTiles();
 		for(CatanTile tile: tiles) {
-			if(tile.getResource() != Card.None && tile.getRoll() == roll) {
+			if(tile.getResource() != Card.None && tile.getRoll() == roll && !tile.hasRobber()) {
 				player.getHand().addCard(tile.getResource());
 			}
 		}

@@ -22,7 +22,7 @@ public class AIPlayer extends Player {
 
 	@Override
 	public int[] moveRobber(CatanBoard board, ArrayList<PlayerData> players) {
-		return new int[]{(int) (Math.random() * 2 + 2), (int) (Math.random() * 2 + 1)};
+		return new int[]{(int) (Math.random() * 2 + 2), (int) (Math.random() * 2 + 1), 0};
 	}
 
 	@Override
@@ -50,5 +50,10 @@ public class AIPlayer extends Player {
 	@Override
 	public int sendTradeResponses(int[][] responses) {
 		return -1;
+	}
+
+	@Override
+	public int[] getDiscard(CatanBoard board, ArrayList<PlayerData> players, int amount) {
+		return new int[]{1, 1, 1, 1, 1};
 	}
 }

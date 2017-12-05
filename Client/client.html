@@ -107,7 +107,6 @@
 	var username = "Brandon";
 	var team = 0;
 	
-	var expectedMessage = NONE;
 	var board = {};
 	var playerData = [];
 	var hexes = [];
@@ -127,44 +126,49 @@
 		socket = new WebSocket("ws://127.0.0.1:1185");
 		
 		socket.onmessage = function(event) {
-			var setExpectedMessage = false;
-			if(expectedMessage == NONE) {
-				expectedMessage = event.data;
-				setExpectedMessage = true;
-			} else if(expectedMessage == GAMESTATE_BOARD) {
-				board = JSON.parse(event.data);
+			var msg = event.data;
+			var primaryProtocol = msg.charAt(0);
+			var secondaryProtocol = msg.charAt(1);
+			var protocol = parseInt(primaryProtocol);
+			if(isNumber(secondaryProtocol)) {
+				protocol = protocol * 10 + parseInt(secondaryProtocol);
+				msg = msg.substring(2);
+			} else {
+				msg = msg.substring(1);
+			}
+			if(protocol == GAMESTATE_BOARD) {
+				board = JSON.parse(msg);
 				drawBoard();
-			} else if(expectedMessage == GAMESTATE_PLAYERS) {
-				updatePlayers(JSON.parse(event.data));
-			} else if(expectedMessage == CONSOLE) {
-				showMessage(event.data);
-			} else if(expectedMessage == GAMESTATE_HAND) {
-				updateHand(JSON.parse(event.data));
-			} else if(expectedMessage == ROBBER) {
-				placeRobber(JSON.parse(event.data));
-			} else if(expectedMessage == TURN) {
+			} else if(protocol == GAMESTATE_PLAYERS) {
+				updatePlayers(JSON.parse(msg));
+			} else if(protocol == INFORMATION_CONSOLE) {
+				showMessage(msg);
+			} else if(protocol == GAMESTATE_HAND) {
+				updateHand(JSON.parse(msg));
+			} else if(protocol == ROBBER) {
+				placeRobber(JSON.parse(msg));
+			} else if(protocol == TURN) {
 				doTurn();
-			} else if(expectedMessage == GAMESTATE_DEV_CARDS) {
-				devCards = JSON.parse(event.data);
+			} else if(protocol == GAMESTATE_DEV_CARDS) {
+				devCards = JSON.parse(msg);
 				updateDevCards(devCards);
-			} else if(expectedMessage == PLACE) {
+			} else if(protocol == PLACE) {
 				placeInitial();
-			} else if(expectedMessage == TEAM) {
-				team = parseInt(event.data);
-			} else if(expectedMessage == RESPONSE + " " + TRADE) {
-				selectOffer(JSON.parse(event.data));
-			} else if(expectedMessage == TRADE) {
-				acceptOffer(JSON.parse(event.data));
+			} else if(protocol == INFORMATION_TEAM) {
+				team = parseInt(msg);
+			} else if(protocol == RESPONSE * 10 + TRADE) {
+				selectOffer(JSON.parse(msg));
+			} else if(protocol == TRADE) {
+				acceptOffer(JSON.parse(msg));
+			} else if(protocol == ROBBER_DISCARD) {
+				discard(parseInt(msg));
 			} else {
 				console.log(event.data);
 			}
-			
-			if(!setExpectedMessage)
-				expectedMessage = NONE;
 		}
 		
 		socket.onopen = function(event) {
-			socket.send(USERNAME + " " + username);
+			socket.send(INFORMATION_USERNAME + " " + username);
 		}
 	
 		var onsubmit = function(e) {
@@ -174,9 +178,9 @@
 			data.push(val);
 			
 			if(data[1].value == "New Game") {
-				socket.send(START_GAME + " " + data[0].value);
+				socket.send(GAME_START + " " + data[0].value);
 			} else {
-				socket.send(JOIN_GAME + " " + data[0].value);
+				socket.send(GAME_JOIN + " " + data[0].value);
 			}
 			$("#form").html("");
 		};
@@ -186,6 +190,85 @@
 		xOffsetGlobal = $("#board")[0].width / 2 - 4 * HEX_WIDTH / 2;
 		yOffsetGlobal = $("#board")[0].height / 2 - 5 * HEX_HEIGHT / 2;
 	});
+	
+	function isNumber(c) {
+		return c >= '0' && c <= '9';
+	}
+	
+	function discard(amount) {
+		showMessage("You must choose " + amount + " cards to discard.");
+		var html = "<table class='table table-sm'>";
+		html += "<thead>";
+		html += "<tr><th>Action</th><th colspan='5'>Resource</th></tr>";
+		html += "</thead><tbody>";
+		html += "<tr>";
+		html += "	<td>Discard</td>";
+		html += "	<td><img src='images/wood.png' class='resource-icon' /></td>";
+		html += "	<td><img src='images/sheep.png' class='resource-icon' /></td>";
+		html += "	<td><img src='images/wheat.png' class='resource-icon' /></td>";
+		html += "	<td><img src='images/stone.png' class='resource-icon' /></td>";
+		html += "	<td><img src='images/brick.png' class='resource-icon' /></td>";
+		html += "</tr>";
+		html += "<tr>";
+		html += "	<td></td>";
+		html += "	<td><input type='submit' resource='wood' class='btn btn-sm btn-secondary give' name='action' value='+'/></td>";
+		html += "	<td><input type='submit' resource='sheep' class='btn btn-sm btn-secondary give' name='action' value='+'/></td>";
+		html += "	<td><input type='submit' resource='wheat' class='btn btn-sm btn-secondary give' name='action' value='+'/></td>";
+		html += "	<td><input type='submit' resource='stone' class='btn btn-sm btn-secondary give' name='action' value='+'/></td>";
+		html += "	<td><input type='submit' resource='brick' class='btn btn-sm btn-secondary give' name='action' value='+'/></td>";
+		html += "</tr>";
+		html += "<tr>";
+		html += "	<td></td>";
+		html += "	<td id='wood-give-amt' class='text-center' >0</td>";
+		html += "	<td id='sheep-give-amt' class='text-center'>0</td>";
+		html += "	<td id='wheat-give-amt' class='text-center'>0</td>";
+		html += "	<td id='stone-give-amt' class='text-center'>0</td>";
+		html += "	<td id='brick-give-amt' class='text-center'>0</td>";
+		html += "</tr>";
+		html += "<tr>";
+		html += "	<td></td>";
+		html += "	<td><input type='submit' resource='wood' class='btn btn-sm btn-secondary give' name='action' value='-'/></td>";
+		html += "	<td><input type='submit' resource='sheep' class='btn btn-sm btn-secondary give' name='action' value='-'/></td>";
+		html += "	<td><input type='submit' resource='wheat' class='btn btn-sm btn-secondary give' name='action' value='-'/></td>";
+		html += "	<td><input type='submit' resource='stone' class='btn btn-sm btn-secondary give' name='action' value='-'/></td>";
+		html += "	<td><input type='submit' resource='brick' class='btn btn-sm btn-secondary give' name='action' value='-'/></td>";
+		html += "</tr>";
+		html += "<tr><td><input type='submit' class='btn btn-sm btn-primary' name='action' value='Submit' /></td></tr>";
+		html += "</tbody></table>";
+		
+		var onsubmit = function(e) {
+			e.preventDefault();
+			var clicked = $("input[type=submit][clicked=true]");
+			var val = clicked.attr('value');
+			var res = clicked.attr('resource');
+			var counter;
+			if(clicked.hasClass("give")) {
+				counter = $("#" + res + "-give-amt");
+			} else if(clicked.hasClass("take")) {
+				counter = $("#" + res + "-take-amt");
+			}
+			if(counter != null) {
+				var change = 0;
+				if(val == '+') change = 1;
+				else change = -1;
+				var count = parseInt(counter.html());
+				count += change;
+				if(count >= 0)
+					counter.html("" + count);
+			} else if(val == 'Submit') {
+				var params = "";
+				params += $("#wood-give-amt").html() + " ";
+				params += $("#sheep-give-amt").html() + " ";
+				params += $("#wheat-give-amt").html() + " ";
+				params += $("#stone-give-amt").html() + " ";
+				params += $("#brick-give-amt").html();
+				socket.send(RESPONSE + " " + DISCARD + " " + params);
+				updateForm("", null);
+			}
+		};
+		
+		updateForm(html, onsubmit);
+	}
 	
 	function doTurn() {
 		var devCards = countDevCards();
@@ -236,9 +319,9 @@
 			} else if(val == "Build Road") {
 				buildRoad();
 			} else if(val == "Buy Development Card") {
-				socket.send(RESPONSE + " " + DEV_CARD);
+				socket.send(RESPONSE + "" + TURN_DEV_CARD);
 			} else if(val == "Play Knight") {
-				socket.send(RESPONSE + " " + KNIGHT);
+				socket.send(RESPONSE + "" + TURN_KNIGHT);
 			} else if(val == "Play Monopoly") {
 				doMonopoly();
 			} else if(val == "Play Year of Plenty") {
@@ -250,7 +333,7 @@
 			} else if(val == "Trade with Bank") {
 				bankTrade();
 			} else if(val == "End Turn") {
-				socket.send(RESPONSE + " " + TURN);
+				socket.send(RESPONSE + "");
 				updateForm("", null);
 			}
 		};
@@ -493,7 +576,7 @@
 				params += $("#wheat-take-amt").html() + " ";
 				params += $("#stone-take-amt").html() + " ";
 				params += $("#brick-take-amt").html();
-				socket.send(RESPONSE + " " + TRADE + " " + PLAYERS + " " + params);
+				socket.send(RESPONSE + "" + TRADE_PLAYERS + "" + params);
 				updateForm("Waiting for all players to respond to offer...", null);
 			}
 		}
@@ -535,7 +618,7 @@
 				params += $("#wheat-take-amt").html() + " ";
 				params += $("#stone-take-amt").html() + " ";
 				params += $("#brick-take-amt").html();
-				socket.send(RESPONSE + " " + TRADE + " " + BANK + " " + params);
+				socket.send(RESPONSE + "" + TRADE_BANK + "" + params);
 				doTurn();
 			}
 		};
@@ -550,7 +633,7 @@
 		onInput = function(x, y) {
 			var pos = calculateSpaceClicked(x, y);
 			if(pos != null && isValidSettlement({x: x, y: y}, true)) {
-				socket.send(RESPONSE + " " + PLACE + " " + SETTLEMENT + " " + pos.hex.diagonal + " " + pos.hex.column + " " + pos.space);
+				socket.send(RESPONSE + "" + PLACE_SETTLEMENT + pos.hex.diagonal + " " + pos.hex.column + " " + pos.space);
 				showMessage("You may now place a road. Click where you would like to place your road.");
 				inputArg = board;
 				drawBoard(0, true, pos);
@@ -558,7 +641,7 @@
 					var pos = calculateLinkClicked(x, y);
 					if(pos != null) {
 						drawBoard();
-						socket.send(RESPONSE + " " + PLACE + " " + ROAD + " " + pos.hex.diagonal + " " + pos.hex.column + " " + pos.link);
+						socket.send(RESPONSE + "" + PLACE_ROAD + pos.hex.diagonal + " " + pos.hex.column + " " + pos.link);
 						onInput = null;
 					}
 				};
@@ -574,7 +657,7 @@
 			var pos = calculateSpaceClicked(x, y);
 			if(pos != null) {
 				drawBoard();
-				socket.send(RESPONSE + " " + CITY + " " + pos.hex.diagonal + " " + pos.hex.column + " " + pos.space);
+				socket.send(RESPONSE + "" + TURN_CITY + "" + pos.hex.diagonal + " " + pos.hex.column + " " + pos.space);
 				onInput = null;
 			}
 		}
@@ -588,7 +671,7 @@
 			var pos = calculateSpaceClicked(x, y);
 			if(pos != null) {
 				drawBoard();
-				socket.send(RESPONSE + " " + SETTLEMENT + " " + pos.hex.diagonal + " " + pos.hex.column + " " + pos.space);
+				socket.send(RESPONSE + "" + TURN_SETTLEMENT + "" + pos.hex.diagonal + " " + pos.hex.column + " " + pos.space);
 				onInput = null;
 			}
 		};
@@ -602,10 +685,24 @@
 			var pos = calculateLinkClicked(x, y);
 			if(pos != null) {
 				drawBoard();
-				socket.send(RESPONSE + " " + ROAD + " " + pos.hex.diagonal + " " + pos.hex.column + " " + pos.link);
+				socket.send(RESPONSE + "" + TURN_ROAD + "" + pos.hex.diagonal + " " + pos.hex.column + " " + pos.link);
 				onInput = null;
 			}
 		};
+	}
+	
+	function isValidSteal(position, hex) {
+		for(var i = 0; i < settlements.length; i++) {
+			var settlement = settlements[i];
+			if(settlement.team != team) {
+				var d1 = dist(position.x, position.y, settlement.x, settlement.y);
+				var d2 = dist((hex.first[0] + hex.last[0]) / 2, (hex.first[1] + hex.last[1]) / 2, settlement.x, settlement.y);
+				if(d1 < 15 && d2 < HEX_WIDTH * 2.0 / 3) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 	
 	function isValidSettlement(position, init) {
@@ -699,7 +796,7 @@
 			var cancel = ($("input[type=submit][clicked=true]").val() != null);
 			
 			if(!cancel) {
-				socket.send(RESPONSE + " " + MONOPOLY + " " + val);
+				socket.send(RESPONSE + "" + TURN_MONOPOLY + " " + val);
 			}
 			doTurn();
 		};
@@ -734,8 +831,22 @@
 			} else if(board.tiles[coordinate.diagonal][coordinate.column] == null) {
 				showMessage("You must place the robber on a valid tile.");
 			} else {
-				socket.send(RESPONSE + " " + coordinate.diagonal + " " + coordinate.column);
-				onInput = null;
+				var center = calculateHexClicked(x, y);
+				drawBoard(3, false, center, false);
+				onInput = function(x, y, response=RESPONSE + "" + coordinate.diagonal + " " + coordinate.column) {
+					if(isValidSteal({x: x, y: y}, center)) {
+						for(var i = 0; i < settlements.length; i++) {
+							var settlement = settlements[i];
+							var d = dist(x, y, settlement.x, settlement.y);
+							if(d <= 20) {
+								socket.send(response + " " + settlement.team);
+								drawBoard();
+								onInput = null;
+								return;
+							}
+						}
+					}
+				};
 			}
 		};
 	}

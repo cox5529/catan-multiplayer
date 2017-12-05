@@ -21,10 +21,14 @@ import java.util.ArrayList;
 
 public abstract class Player {
 
-	protected static final String SETTLEMENT = "SETTLEMENT";
-	protected static final String CITY = "CITY";
-	protected static final String DEV_CARD = "DEV CARD";
-	protected static final String ROAD = "ROAD";
+	public static final int TURN_SETTLEMENT = 40;
+	public static final int TURN_CITY = 41;
+	public static final int TURN_ROAD = 42;
+	public static final int TURN_DEV_CARD = 43;
+	public static final int TURN_KNIGHT = 44;
+	public static final int TURN_MONOPOLY = 45;
+	public static final int TURN_YOP = 46;
+	public static final int TURN_RB = 47;
 
 	protected int team;
 	protected String name;
@@ -55,6 +59,25 @@ public abstract class Player {
 	public abstract int[] sendTradeOffer(CatanBoard board, ArrayList<PlayerData> players, int sourcePlayer, int[] trade);
 
 	public abstract int sendTradeResponses(int[][] responses);
+
+	public abstract int[] getDiscard(CatanBoard board, ArrayList<PlayerData> players, int amount);
+
+	public final void onSeven(CatanBoard board, ArrayList<PlayerData> players) {
+		if (hand.getSize() > 7) {
+			int amt = hand.getSize() / 2;
+			int a = amt;
+			while (amt > 0) {
+				int[] discard = getDiscard(board, players, amt);
+				for (int i = 0; i < 5; i++) {
+					if (hand.getCount(i) >= discard[i]) {
+						hand.removeCard(i, discard[i]);
+						amt -= discard[i];
+					}
+				}
+			}
+			game.broadcastConsoleMessage("The robber has stolen " + a + " cards from " + name + ".");
+		}
+	}
 
 	public void place(CatanBoard board, ArrayList<PlayerData> players, boolean giveCards) {
 		String[] data = getPlacement(board, players, giveCards).split(" ");
@@ -104,22 +127,22 @@ public abstract class Player {
 			int[] trade = responses[tradeId];
 			if (trade.length == 10) {
 				// make sure both players have resources
-				for(int i = 0; i < 5; i++) {
-					if(hand.getCount(i) < amounts[i]) {
+				for (int i = 0; i < 5; i++) {
+					if (hand.getCount(i) < amounts[i]) {
 						return -1;
 					}
 				}
-				for(int i = 5; i < 10; i++) {
-					if(player.getHand().getCount(i - 5) < amounts[i]) {
+				for (int i = 5; i < 10; i++) {
+					if (player.getHand().getCount(i - 5) < amounts[i]) {
 						return -1;
 					}
 				}
 				// trade resources
-				for(int i = 0; i < 5; i++) {
+				for (int i = 0; i < 5; i++) {
 					hand.removeCard(i, amounts[i]);
 					player.getHand().addCard(i, amounts[i]);
 				}
-				for(int i = 5; i < 10; i++) {
+				for (int i = 5; i < 10; i++) {
 					player.getHand().removeCard(i - 5, amounts[i]);
 					hand.addCard(i - 5, amounts[i]);
 				}
@@ -191,8 +214,8 @@ public abstract class Player {
 		return 0;
 	}
 
-	public final int buy(String object) {
-		if (object.equals(DEV_CARD)) {
+	public final int buy(int type, String object) {
+		if (type == TURN_DEV_CARD) {
 			if (hand.getCount(Card.Sheep) >= 1 && hand.getCount(Card.Stone) >= 1 && hand.getCount(Card.Wheat) >= 1) {
 				DevelopmentCard card = game.drawDevCard(this);
 				if (card != null) {
@@ -205,12 +228,12 @@ public abstract class Player {
 					return 2;
 				}
 			} else return 1;
-		} else if (object.startsWith(SETTLEMENT)) {
+		} else if (type == TURN_SETTLEMENT) {
 			if (hand.getCount(Card.Sheep) >= 1 && hand.getCount(Card.Brick) >= 1 && hand.getCount(Card.Wheat) >= 1 && hand.getCount(Card.Wood) >= 1) {
 				String[] data = object.split(" ");
-				int diag = Integer.parseInt(data[1]);
-				int col = Integer.parseInt(data[2]);
-				int spaceId = Integer.parseInt(data[3]);
+				int diag = Integer.parseInt(data[0]);
+				int col = Integer.parseInt(data[1]);
+				int spaceId = Integer.parseInt(data[2]);
 				if (game.getBoard().isValidSettlementLocation(diag, col, spaceId, team, false)) {
 					buildSettlement(diag, col, spaceId);
 					hand.removeCard(Card.Sheep);
@@ -224,12 +247,12 @@ public abstract class Player {
 			} else {
 				return 2;
 			}
-		} else if (object.startsWith(ROAD)) {
+		} else if (type == TURN_ROAD) {
 			if (hand.getCount(Card.Brick) >= 1 && hand.getCount(Card.Wood) >= 1) {
 				String[] data = object.split(" ");
-				int diag = Integer.parseInt(data[1]);
-				int col = Integer.parseInt(data[2]);
-				int linkId = Integer.parseInt(data[3]);
+				int diag = Integer.parseInt(data[0]);
+				int col = Integer.parseInt(data[1]);
+				int linkId = Integer.parseInt(data[2]);
 				if (game.getBoard().isValidRoadLocation(diag, col, linkId, team)) {
 					CatanLink link = game.getBoard().findLink(diag, col, linkId);
 					link.setRoad(team);
@@ -241,7 +264,7 @@ public abstract class Player {
 			} else {
 				return 2;
 			}
-		} else if (object.startsWith(CITY)) {
+		} else if (type == TURN_CITY) {
 			if (hand.getCount(Card.Wheat) >= 2 && hand.getCount(Card.Stone) >= 3) {
 				String[] data = object.split(" ");
 				int diag = Integer.parseInt(data[1]);
@@ -358,7 +381,7 @@ public abstract class Player {
 			player.getPlayedDevCards().add(card);
 		for (DevelopmentCard card : devCards)
 			player.getDevCards().add(card);
-		for(CatanBuilding building: buildings) {
+		for (CatanBuilding building : buildings) {
 			player.getBuildings().add(building);
 			building.setPlayer(player);
 		}

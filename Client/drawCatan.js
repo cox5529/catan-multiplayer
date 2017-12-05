@@ -6,8 +6,8 @@ function drawBoard(highlightSpaces=0, highlightLinks=false, center=null, init=fa
 	updateSettlements(board.tiles);
 	updateRoads(board.links);
 
-	drawHexes(canvas, board.tiles, highlightSpaces, init);
-	drawLinks(canvas, board.links, highlightLinks, center);
+	drawHexes(canvas, board.tiles, highlightSpaces, init, center);
+	drawLinks(canvas, board.links, highlightLinks, center, highlightSpaces);
 	drawPorts(canvas, board.ports);
 	drawRobber(canvas, board.robber);
 }
@@ -82,7 +82,7 @@ function updateSettlements(tiles) {
 	}
 }
 
-function drawHexes(canvas, tiles, highlightSpaces=0, init=false) {
+function drawHexes(canvas, tiles, highlightSpaces=0, init=false, center) {
 	hexes = [];
 	for(var i = 0; i < tiles.length; i++) {
 		var row = [];
@@ -158,7 +158,7 @@ function drawHexes(canvas, tiles, highlightSpaces=0, init=false) {
 				
 				row.push(hex);
 				
-				drawSpaces(canvas, tiles[i][j], j, i, highlightSpaces, init);
+				drawSpaces(canvas, tiles[i][j], j, i, highlightSpaces, init, center);
 				
 				if(tiles[i][j].resource != "None") {
 					var horizontalOffset = xOffset + xOffsetGlobal + HEX_WIDTH / 2;
@@ -187,7 +187,7 @@ function drawHexes(canvas, tiles, highlightSpaces=0, init=false) {
 	}
 }
 
-function drawSpaces(canvas, tile, column, diagonal, highlightSpaces, init) {
+function drawSpaces(canvas, tile, column, diagonal, highlightSpaces, init, center) {
 	var spaces = tile.spaces;
 	for(var i = 0; i < spaces.length; i++) {
 		var space = spaces[i];
@@ -215,6 +215,12 @@ function drawSpaces(canvas, tile, column, diagonal, highlightSpaces, init) {
 		
 		
 		if(highlightSpaces == 2 && space.building != null && isValidCity({x: x, y: y})) {
+			canvas.fillStyle = "#000";
+			canvas.beginPath();
+			canvas.arc(x, y, 15, 0, 2 * Math.PI);
+			canvas.closePath();
+			canvas.fill();
+		} else if(highlightSpaces == 3 && center != null && isValidSteal({x: x, y: y}, center)) {
 			canvas.fillStyle = "#000";
 			canvas.beginPath();
 			canvas.arc(x, y, 15, 0, 2 * Math.PI);
@@ -260,9 +266,9 @@ function drawSpaces(canvas, tile, column, diagonal, highlightSpaces, init) {
 	}
 }
 
-function drawLinks(canvas, links, highlight=false, center=null) {
+function drawLinks(canvas, links, highlight=false, center=null, highlightSpaces) {
 	var list = links;
-	if(center != null) {
+	if(center != null && highlightSpaces != 3) {
 		list = [];
 		var point = center.hex.points[center.space];
 		for(var i = 0; i < links.length; i++) {

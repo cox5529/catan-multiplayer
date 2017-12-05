@@ -25,7 +25,9 @@ public class Hand {
 	}
 
 	public void addCard(Card card) {
-		hand.put(card, hand.get(card) + 1);
+		if(hand.containsKey(card)) {
+			hand.put(card, hand.get(card) + 1);
+		}
 	}
 
 	public void addCard(int cardId, int amount) {
@@ -53,6 +55,20 @@ public class Hand {
 			removeCard(card);
 		}
 		return true;
+	}
+
+	public Card removeRandomCard() {
+		int total = getSize();
+		double runningTotal = 0;
+		double random = Math.random();
+		for (int i = 0; i < 5; i++) {
+			runningTotal += (0.0 + getCount(i)) / total;
+			if (random < runningTotal) {
+				Card re = intToCard(i);
+				removeCard(re);
+				return re;
+			}
+		} return Card.None;
 	}
 
 	public void clear() {

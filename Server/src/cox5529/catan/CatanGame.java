@@ -3,6 +3,7 @@ package cox5529.catan;
 
 import cox5529.catan.board.CatanBoard;
 import cox5529.catan.board.CatanSpace;
+import cox5529.catan.board.CatanTile;
 import cox5529.catan.board.Robber;
 import cox5529.catan.board.building.CatanBuilding;
 import cox5529.catan.devcard.*;
@@ -104,11 +105,29 @@ public class CatanGame implements Runnable {
 		int[] robberPos = player.moveRobber(board, buildPlayerData());
 		Robber robber = board.getRobber();
 		while (robberPos[0] == robber.getDiagonal() && robberPos[1] == robber.getColumn()) {
+			boolean validSteal = false;
+			CatanTile tile = board.getTiles()[robberPos[0]][robberPos[1]];
+			for (CatanSpace space : tile.getSpaces()) {
+				if (space.getBuilding() != null && space.getBuilding().getPlayer().getTeam() == robberPos[2]) {
+					validSteal = true;
+					break;
+				}
+			}
+			if (robberPos[2] == -1 || validSteal) {
+				break;
+			}
 			robberPos = player.moveRobber(board, buildPlayerData());
 		}
 		board.moveRobber(robberPos[0], robberPos[1]);
 		broadcastGameState();
 		broadcastConsoleMessage(player.getName() + " has moved the robber!");
+		if(robberPos[2] != -1) {
+			Player stolen = players.get(robberPos[2]);
+			Card c = stolen.getHand().removeRandomCard();
+			player.getHand().addCard(c);
+			broadcastConsoleMessage(player.getName() + " has stolen a " + c + " from " + stolen.getName() + ".");
+		}
+		broadcastGameState();
 	}
 
 	public void broadcastConsoleMessage(String message) {
@@ -160,6 +179,24 @@ public class CatanGame implements Runnable {
 				}
 			}
 		} else {
+			Thread[] t = new Thread[players.size()];
+			for (Player robbed : players) {
+				ArrayList<PlayerData> data = buildPlayerData();
+				Runnable r = () -> robbed.onSeven(board, data);
+				t[robbed.getTeam()] = new Thread(r);
+				t[robbed.getTeam()].start();
+			}
+			while (true) {
+				boolean cont = true;
+				for (int i = 0; i < t.length; i++) {
+					if (t[i].isAlive()) cont = false;
+				}
+				if (cont) break;
+				try {
+					Thread.sleep(1);
+				} catch (Exception e) {
+				}
+			}
 			moveRobber(player);
 		}
 		player.onTurn(board, buildPlayerData());

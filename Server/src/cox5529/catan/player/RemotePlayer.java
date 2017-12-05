@@ -20,27 +20,34 @@ import java.util.Queue;
 
 public class RemotePlayer extends Player {
 
-	public static final String GAMESTATE = "STATE";
-	public static final String GAMESTATE_BOARD = "BOARD";
-	public static final String GAMESTATE_PLAYERS = "PLAYERS";
-	public static final String GAMESTATE_HAND = "HAND";
-	public static final String START_GAME = "GAME START";
-	public static final String JOIN_GAME = "GAME JOIN";
-	public static final String USERNAME = "USERNAME";
-	public static final String CONSOLE = "CONSOLE";
-	public static final String ROBBER = "ROBBER";
-	public static final String RESPONSE = "RESPONSE";
-	public static final String TURN = "TURN";
-	public static final String GAMESTATE_DEV_CARDS = "DEV CARDS";
-	public static final String KNIGHT = "KNIGHT";
-	public static final String MONOPOLY = "MONOPOLY";
-	public static final String YOP = "YOP";
-	public static final String RB = "RB";
-	public static final String PLACE = "PLACE";
-	public static final String TEAM = "TEAM";
-	public static final String TRADE = "TRADE";
-	public static final String BANK = "BANK";
+	public static final int ROBBER = 1;
+	public static final int INFORMATION = 2;
+	public static final int TRADE = 3;
+	public static final int TURN = 4;
+	public static final int GAME = 5;
+	public static final int RESPONSE = 6;
+	public static final int PLACE = 7;
 
+	public static final int ROBBER_DISCARD = 10;
+	public static final int ROBBER_PLACE = 11;
+
+	public static final int INFORMATION_CONSOLE = 20;
+	public static final int INFORMATION_TEAM = 21;
+	public static final int INFORMATION_USERNAME = 22;
+
+	public static final int TRADE_BANK = 30;
+	public static final int TRADE_PLAYERS = 31;
+
+	public static final int GAME_START = 50;
+	public static final int GAME_JOIN = 51;
+
+	public static final int PLACE_SETTLEMENT = 70;
+	public static final int PLACE_ROAD = 71;
+
+	public static final int GAMESTATE_BOARD = 80;
+	public static final int GAMESTATE_PLAYERS = 81;
+	public static final int GAMESTATE_HAND = 82;
+	public static final int GAMESTATE_DEV_CARDS = 83;
 
 	@JsonIgnore
 	private WebSocket connection;
@@ -57,17 +64,17 @@ public class RemotePlayer extends Player {
 	}
 
 	public void onMessage(CatanServer server, String message) {
-		if (message.startsWith(START_GAME)) {
-			String key = message.substring(START_GAME.length() + 1);
+		if (message.startsWith("" + GAME_START)) {
+			String key = message.substring(2);
 			server.startGame(key, this);
-		} else if (message.startsWith(JOIN_GAME)) {
-			String key = message.substring(JOIN_GAME.length() + 1);
+		} else if (message.startsWith("" + GAME_JOIN)) {
+			String key = message.substring(2);
 			server.getGame(key).addPlayer(this);
-		} else if (message.startsWith(USERNAME)) {
-			this.name = message.substring(USERNAME.length() + 1);
-		} else if (message.startsWith(RESPONSE)) {
+		} else if (message.startsWith("" + INFORMATION_USERNAME)) {
+			this.name = message.substring(2);
+		} else if (message.startsWith(RESPONSE + "")) {
 			synchronized (response) {
-				this.response.add(message.substring(RESPONSE.length() + 1));
+				this.response.add(message.substring(1));
 			}
 		}
 	}
@@ -76,10 +83,10 @@ public class RemotePlayer extends Player {
 	public void sendGameState(CatanBoard board, Hand hand, ArrayList<DevelopmentCard> devCards, ArrayList<PlayerData> players) {
 		ObjectMapper mapper = new ObjectMapper();
 		try {
-			send(GAMESTATE + " " + GAMESTATE_BOARD, mapper.writeValueAsString(board));
-			send(GAMESTATE + " " + GAMESTATE_PLAYERS, mapper.writeValueAsString(players));
-			send(GAMESTATE + " " + GAMESTATE_HAND, hand.toJSON());
-			send(GAMESTATE + " " + GAMESTATE_DEV_CARDS, mapper.writeValueAsString(devCards));
+			send(GAMESTATE_BOARD, mapper.writeValueAsString(board));
+			send(GAMESTATE_PLAYERS, mapper.writeValueAsString(players));
+			send(GAMESTATE_HAND, hand.toJSON());
+			send(GAMESTATE_DEV_CARDS, mapper.writeValueAsString(devCards));
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 		}
@@ -96,20 +103,20 @@ public class RemotePlayer extends Player {
 		waitForResponse();
 		String response = this.response.poll();
 		String[] coords = response.split(" ");
-		int[] re = new int[2];
+		int[] re = new int[3];
 		re[0] = Integer.parseInt(coords[0]);
 		re[1] = Integer.parseInt(coords[1]);
+		re[2] = Integer.parseInt(coords[2]);
 		return re;
 	}
 
-	private void send(String protocol, String message) {
-		connection.send(protocol);
-		connection.send(message);
+	private void send(int protocol, String message) {
+		connection.send(protocol + message);
 		Utility.log("Server to " + toString() + ":\t(" + protocol + ") " + message);
 	}
 
 	public void sendConsoleMessage(String message) {
-		send(CONSOLE, message);
+		send(INFORMATION_CONSOLE, message);
 	}
 
 	private void waitForResponse() {
@@ -135,16 +142,24 @@ public class RemotePlayer extends Player {
 			send(TURN, "");
 			waitForResponse();
 			String response = this.response.poll();
-			if (response.equals(TURN)) {
+			if (response.equals("")) {
 				break;
-			} else if (response.equals(DEV_CARD)) {
-				int res = buy(DEV_CARD);
+			}
+			int protocol = Integer.parseInt("" + response.charAt(0));
+			response = response.substring(1);
+			char secondary = response.charAt(0);
+			if (secondary >= '0' && secondary <= '9') {
+				protocol = protocol * 10 + Integer.parseInt(secondary + "");
+				response = response.substring(1);
+			}
+			if (protocol == TURN_DEV_CARD) {
+				int res = buy(TURN_DEV_CARD, "");
 				if (res == 1) {
 					sendConsoleMessage("You do not have the resources to purchase a development card.");
 				} else if (res == 2) {
 					sendConsoleMessage("There are no development cards left to purchase.");
 				}
-			} else if (response.equals(KNIGHT)) {
+			} else if (protocol == TURN_KNIGHT) {
 				boolean valid = false;
 				DevelopmentCard c = null;
 				for (DevelopmentCard card : devCards) {
@@ -159,7 +174,7 @@ public class RemotePlayer extends Player {
 				} else {
 					sendConsoleMessage("You do not have a knight card to play.");
 				}
-			} else if (response.startsWith(MONOPOLY)) {
+			} else if (protocol == TURN_MONOPOLY) {
 				boolean valid = false;
 				DevelopmentCard c = null;
 				for (DevelopmentCard card : devCards) {
@@ -170,12 +185,12 @@ public class RemotePlayer extends Player {
 					}
 				}
 				if (valid) {
-					playDevelopmentCard(c, response.substring(MONOPOLY.length() + 1));
+					playDevelopmentCard(c, response);
 				} else {
 					sendConsoleMessage("You do not have a monopoly card to play.");
 				}
-			} else if (response.startsWith(SETTLEMENT)) {
-				int res = buy(response);
+			} else if (protocol == TURN_SETTLEMENT) {
+				int res = buy(protocol, response);
 				if (res == 1) {
 					sendConsoleMessage("You cannot place a settlement there.");
 				} else if (res == 2) {
@@ -183,8 +198,8 @@ public class RemotePlayer extends Player {
 				} else {
 					game.broadcastConsoleMessage(name + " has just built a new settlement.");
 				}
-			} else if (response.startsWith(ROAD)) {
-				int res = buy(response);
+			} else if (protocol == TURN_ROAD) {
+				int res = buy(protocol, response);
 				if (res == 1) {
 					sendConsoleMessage("You cannot place a road there.");
 				} else if (res == 2) {
@@ -192,8 +207,8 @@ public class RemotePlayer extends Player {
 				} else {
 					game.broadcastConsoleMessage(name + " has just built a new road.");
 				}
-			} else if (response.startsWith(CITY)) {
-				int res = buy(response);
+			} else if (protocol == TURN_CITY) {
+				int res = buy(protocol, response);
 				if (res == 1) {
 					sendConsoleMessage("You cannot place a city there.");
 				} else if (res == 2) {
@@ -201,15 +216,14 @@ public class RemotePlayer extends Player {
 				} else {
 					game.broadcastConsoleMessage(name + " has just built a new city.");
 				}
-			} else if (response.startsWith(TRADE + " " + BANK)) {
-				String data = response.substring((TRADE + " " + BANK).length() + 1);
-				int res = bankTrade(data);
+			} else if (protocol == TRADE_BANK) {
+				int res = bankTrade(response);
 				if (res == 1) {
 					sendConsoleMessage("You have submitted an invalid trade.");
 				} else if (res == 2) {
 					sendConsoleMessage("You do not have the resources to make that trade.");
 				} else {
-					String[] split = data.split(" ");
+					String[] split = response.split(" ");
 					int[] amounts = new int[10];
 					for (int i = 0; i < split.length; i++) {
 						amounts[i] = Integer.parseInt(split[i]);
@@ -234,15 +248,14 @@ public class RemotePlayer extends Player {
 					}
 					game.broadcastConsoleMessage(name + " has just traded with the bank: " + trade + ".");
 				}
-			} else if (response.startsWith(TRADE + " " + GAMESTATE_PLAYERS)) {
-				String data = response.substring((TRADE + " " + GAMESTATE_PLAYERS).length() + 1);
-				int res = playerTrade(data);
+			} else if (protocol == TRADE_PLAYERS) {
+				int res = playerTrade(response);
 				if (res == -1) {
 					sendConsoleMessage("You have submitted an invalid trade.");
 				} else if (res == -2) {
 					game.broadcastConsoleMessage(name + " has cancelled his trade.");
 				} else {
-					String[] split = data.split(" ");
+					String[] split = response.split(" ");
 					int[] amounts = new int[10];
 					for (int i = 0; i < split.length; i++) {
 						amounts[i] = Integer.parseInt(split[i]);
@@ -282,7 +295,7 @@ public class RemotePlayer extends Player {
 		json += "}";
 		send(TRADE, json);
 		waitForResponse();
-		String response = this.response.poll().substring(TRADE.length() + 1);
+		String response = this.response.poll().substring(2);
 		if (response.equals("reject")) {
 			return new int[0];
 		}
@@ -298,13 +311,13 @@ public class RemotePlayer extends Player {
 	public int sendTradeResponses(int[][] responses) {
 		ObjectMapper mapper = new ObjectMapper();
 		try {
-			send(RESPONSE + " " + TRADE, mapper.writeValueAsString(responses));
+			send(RESPONSE * 10 + TRADE, mapper.writeValueAsString(responses));
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 		}
 		waitForResponse();
 		String response = this.response.poll();
-		String prefix = TRADE;
+		String prefix = TRADE + "";
 		if (response.startsWith(prefix)) {
 			return Integer.parseInt(response.substring(prefix.length() + 1));
 		}
@@ -312,28 +325,45 @@ public class RemotePlayer extends Player {
 	}
 
 	@Override
+	public int[] getDiscard(CatanBoard board, ArrayList<PlayerData> players, int amount) {
+		send(ROBBER_DISCARD, amount + "");
+		waitForResponse();
+		String response = this.response.poll();
+		if (response.startsWith(ROBBER_DISCARD + "")) {
+			String[] data = response.substring(3).split(" ");
+			int[] re = new int[5];
+			for (int i = 0; i < 5; i++) {
+				re[i] = Integer.parseInt(data[i]);
+			}
+			sendGameState(board, hand, devCards, players);
+			return re;
+		}
+		return new int[5];
+	}
+
+	@Override
 	public void setTeam(int team) {
 		this.team = team;
-		send(TEAM, team + "");
+		send(INFORMATION_TEAM, team + "");
 	}
 
 	@Override
 	public String getPlacement(CatanBoard board, ArrayList<PlayerData> players, boolean giveCards) {
 		send(PLACE, "");
-		String prefix = PLACE + " " + SETTLEMENT;
+		String prefix = PLACE_SETTLEMENT + "";
 		String re;
 		String response;
 		do {
 			waitForResponse();
 			response = this.response.poll();
 		} while (!response.startsWith(prefix));
-		re = response.substring(prefix.length() + 1);
-		prefix = PLACE + " " + ROAD;
+		re = response.substring(prefix.length());
+		prefix = PLACE_ROAD + "";
 		do {
 			waitForResponse();
 			response = this.response.poll();
 		} while (!response.startsWith(prefix));
-		re += " " + response.substring(prefix.length() + 1);
+		re += " " + response.substring(prefix.length());
 		return re;
 	}
 
