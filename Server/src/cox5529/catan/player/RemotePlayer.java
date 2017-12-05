@@ -11,6 +11,7 @@ import cox5529.catan.board.CatanBoard;
 import cox5529.catan.devcard.DevelopmentCard;
 import cox5529.catan.devcard.Knight;
 import cox5529.catan.devcard.Monopoly;
+import cox5529.catan.devcard.RoadBuilding;
 import org.java_websocket.WebSocket;
 
 import java.util.ArrayList;
@@ -279,6 +280,21 @@ public class RemotePlayer extends Player {
 						}
 					}
 					game.broadcastConsoleMessage(name + " has just traded with " + game.getPlayers().get(res).getName() + ": " + trade + ".");
+				}
+			} else if(protocol == TURN_RB) {
+				boolean valid = false;
+				DevelopmentCard c = null;
+				for (DevelopmentCard card : devCards) {
+					if (card instanceof RoadBuilding && !card.isGainedThisTurn()) {
+						valid = true;
+						c = card;
+						break;
+					}
+				}
+				if (valid) {
+					playDevelopmentCard(c, response);
+				} else {
+					sendConsoleMessage("You do not have a Road Building card to play.");
 				}
 			} else {
 				Utility.log("Unknown message type: " + response);

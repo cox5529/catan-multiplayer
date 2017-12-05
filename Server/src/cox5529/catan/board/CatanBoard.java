@@ -226,6 +226,30 @@ public class CatanBoard {
 		return false;
 	}
 
+	public boolean isValidRoadLocation(int diag, int col, int pos, int d1, int c1, int p1, int team) {
+		CatanLink link = findLink(diag, col, pos);
+		CatanBuilding front = link.getFrontSpace().getBuilding();
+		CatanBuilding rear = link.getRearSpace().getBuilding();
+		if (front != null && front.getPlayer().getTeam() == team) {
+			return true;
+		}
+		if (rear != null && rear.getPlayer().getTeam() == team) {
+			return true;
+		}
+		CatanLink l1 = findLink(d1, c1, p1);
+		for (CatanLink a : link.getFrontSpace().getLinks()) {
+			if (a.getRoad() == team || a.equals(l1)) {
+				return true;
+			}
+		}
+		for (CatanLink a : link.getRearSpace().getLinks()) {
+			if (a.getRoad() == team || a.equals(l1)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public boolean isValidPlacementLocation(int diag, int col, int pos, int spaceDiag, int spaceCol, int spacePos) {
 		CatanLink link = findLink(diag, col, pos);
 		CatanSpace space = findSpace(spaceDiag, spaceCol, spacePos);
@@ -236,7 +260,7 @@ public class CatanBoard {
 
 	public boolean isValidCityLocation(int diag, int col, int pos, int team) {
 		CatanSpace space = findSpace(diag, col, pos);
-		if(space != null) {
+		if (space != null) {
 			CatanBuilding building = space.getBuilding();
 			return building != null && building instanceof Settlement && building.getPlayer().getTeam() == team;
 		}

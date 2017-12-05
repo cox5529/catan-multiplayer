@@ -24,12 +24,15 @@ public abstract class DevelopmentCard {
 		this.gainedThisTurn = gainedThisTurn;
 	}
 
-	public void play(CatanGame game, Player player, String argument) {
-		game.broadcastConsoleMessage(player.getName() + " has just played a " + name + " development card!");
-		doAction(game, player, argument);
+	public boolean play(CatanGame game, Player player, String argument) {
+		if(doAction(game, player, argument)) {
+			game.broadcastConsoleMessage(player.getName() + " has just played a " + name + " development card!");
+			return true;
+		}
+		return false;
 	}
 
 
 
-	public abstract void doAction(CatanGame game, Player player, String argument);
+	public abstract boolean doAction(CatanGame game, Player player, String argument);
 }

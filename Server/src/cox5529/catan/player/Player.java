@@ -14,6 +14,7 @@ import cox5529.catan.board.building.Settlement;
 import cox5529.catan.devcard.DevelopmentCard;
 import cox5529.catan.devcard.Knight;
 import cox5529.catan.devcard.Monopoly;
+import cox5529.catan.devcard.RoadBuilding;
 import org.java_websocket.WebSocket;
 
 import java.lang.reflect.Array;
@@ -309,14 +310,19 @@ public abstract class Player {
 		for (DevelopmentCard c : devCards) {
 			if (c.equals(card) && !c.isGainedThisTurn()) {
 				valid = true;
-				devCards.remove(c);
-				playedDevCards.add(c);
 				break;
 			}
 		}
 		if (valid) {
-			card.play(game, this, argument);
-			game.broadcastGameState();
+			if (!card.play(game, this, argument)) {
+				if (this instanceof RemotePlayer) {
+					((RemotePlayer) this).sendConsoleMessage("You cannot play a " + card.getName() + " with those arguments.");
+				}
+			} else {
+				devCards.remove(card);
+				playedDevCards.add(card);
+				game.broadcastGameState();
+			}
 		} else if (this instanceof RemotePlayer) {
 			((RemotePlayer) this).sendConsoleMessage("You do not have a " + card.getName() + " card to play.");
 		}
@@ -385,6 +391,7 @@ public abstract class Player {
 			player.getBuildings().add(building);
 			building.setPlayer(player);
 		}
+		player.getDevCards().add(new RoadBuilding());
 		return player;
 	}
 

@@ -10,7 +10,7 @@ public class VictoryPoint extends DevelopmentCard {
 	}
 
 	@Override
-	public void doAction(CatanGame game, Player player, String argument) {
-
+	public boolean doAction(CatanGame game, Player player, String argument) {
+		return true;
 	}
 }

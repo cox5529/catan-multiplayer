@@ -14,7 +14,7 @@ public class Monopoly extends DevelopmentCard {
 	}
 
 	@Override
-	public void doAction(CatanGame game, Player player, String argument) {
+	public boolean doAction(CatanGame game, Player player, String argument) {
 		Card resource;
 		switch (argument) {
 			case "wheat":
@@ -39,5 +39,6 @@ public class Monopoly extends DevelopmentCard {
 				other.give(player, resource, 99999);
 			}
 		}
+		return true;
 	}
 }

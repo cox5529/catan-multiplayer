@@ -168,7 +168,7 @@
 		}
 		
 		socket.onopen = function(event) {
-			socket.send(INFORMATION_USERNAME + " " + username);
+			socket.send(INFORMATION_USERNAME + "" + username);
 		}
 	
 		var onsubmit = function(e) {
@@ -327,7 +327,7 @@
 			} else if(val == "Play Year of Plenty") {
 				
 			} else if(val == "Play Road Building") {
-				
+				roadBuliding();
 			} else if(val == "Trade with Players") {
 				playerTrade();
 			} else if(val == "Trade with Bank") {
@@ -339,6 +339,76 @@
 		};
 		
 		updateForm(html, onsubmit);
+	}
+	
+	function roadBuliding() {
+		showMessage("You may now place a road. Click where you would like to place your road.");
+		drawBoard(0, true);
+		onInput = function(x, y) {
+			var pos = calculateLinkClicked(x, y);
+			if(pos != null) {
+				setRoad(pos.hex.diagonal, pos.hex.column, pos.link);
+				showMessage("You may now place a road. Click where you would like to place your road.");
+				drawBoard(0, true);
+				onInput = function(x, y, r=pos.hex.diagonal + " " + pos.hex.column + " " + pos.link) {
+					var pos = calculateLinkClicked(x, y);
+					if(pos != null) {
+						socket.send(RESPONSE + "" + TURN_RB + r + " " + pos.hex.diagonal + " " + pos.hex.column + " " + pos.link);
+						onInput = null;
+					}
+				};
+			}
+		};
+	}
+	
+	function setRoad(diag, col, pos) {
+		for(var i = 0; i < board.links.length; i++) {
+			var link = board.links[i];
+			if(isSameRoad({diag: diag, col: col, pos: pos}, {diag: link.diagonal, col: link.column, pos: link.position})) {
+				link.road = team;
+				break;
+			}
+		}
+	}
+	
+	function isSameRoad(first, second) {
+		var x = [];
+		var y = [];
+		x.push(HEX_WIDTH / 4);
+		x.push(HEX_WIDTH * 3 / 4);
+		x.push(HEX_WIDTH);
+		x.push(HEX_WIDTH * 3 / 4);
+		x.push(HEX_WIDTH / 4);
+		x.push(0);
+		
+		y.push(0);
+		y.push(0);
+		y.push(HEX_HEIGHT / 2);
+		y.push(HEX_HEIGHT);
+		y.push(HEX_HEIGHT);
+		y.push(HEX_HEIGHT / 2);
+		
+		first.idx1 = first.pos - 1;
+		if(first.idx1 < 0) first.idx1 += 6;
+		first.idx2 = first.pos;
+		
+		second.idx1 = second.pos - 1;
+		if(second.idx1 < 0) second.idx1 += 6;
+		second.idx2 = second.pos;
+		
+		first.offset = {x: xOffsetGlobal + first.col * HEX_WIDTH * 3 / 4, y: yOffsetGlobal + first.diag * HEX_HEIGHT - first.col * HEX_HEIGHT / 2};
+		second.offset = {x: xOffsetGlobal + second.col * HEX_WIDTH * 3 / 4, y: yOffsetGlobal + second.diag * HEX_HEIGHT - second.col * HEX_HEIGHT / 2};
+		
+		first.start = {x: first.offset.x + x[first.idx1], y: first.offset.y + y[first.idx1]};
+		first.stop = {x: first.offset.x + x[first.idx2], y: first.offset.y + y[first.idx2]};
+		second.start = {x: second.offset.x + x[second.idx1], y: second.offset.y + y[second.idx1]};
+		second.stop = {x: second.offset.x + x[second.idx2], y: second.offset.y + y[second.idx2]};
+		
+		if(first.start.x == second.start.x && first.start.y == second.start.y && first.stop.x == second.stop.x && first.stop.y == second.stop.y)
+			return true;
+		else if(first.start.x == second.stop.x && first.start.y == second.stop.y && first.stop.x == second.start.x && first.stop.y == second.start.y)
+			return true;
+		return false;
 	}
 	
 	function buildTradeMenu(data=null) {
@@ -981,7 +1051,7 @@
 				} else {
 					yop.playable++;
 				}
-			} else if(card.name == "Road building") {
+			} else if(card.name == "Road Building") {
 				if(card.gainedThisTurn) {
 					rb.unplayable++;
 				} else {
