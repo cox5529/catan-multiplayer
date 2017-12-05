@@ -4,14 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import cox5529.Utility;
-import cox5529.catan.Card;
-import cox5529.catan.CatanGame;
 import cox5529.catan.CatanServer;
 import cox5529.catan.board.CatanBoard;
-import cox5529.catan.devcard.DevelopmentCard;
-import cox5529.catan.devcard.Knight;
-import cox5529.catan.devcard.Monopoly;
-import cox5529.catan.devcard.RoadBuilding;
+import cox5529.catan.devcard.*;
 import org.java_websocket.WebSocket;
 
 import java.util.ArrayList;
@@ -295,6 +290,21 @@ public class RemotePlayer extends Player {
 					playDevelopmentCard(c, response);
 				} else {
 					sendConsoleMessage("You do not have a Road Building card to play.");
+				}
+			} else if(protocol == TURN_YOP) {
+				boolean valid = false;
+				DevelopmentCard c = null;
+				for (DevelopmentCard card : devCards) {
+					if (card instanceof YearOfPlenty && !card.isGainedThisTurn()) {
+						valid = true;
+						c = card;
+						break;
+					}
+				}
+				if (valid) {
+					playDevelopmentCard(c, response);
+				} else {
+					sendConsoleMessage("You do not have a Year of Plenty card to play.");
 				}
 			} else {
 				Utility.log("Unknown message type: " + response);

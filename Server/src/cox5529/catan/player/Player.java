@@ -11,10 +11,7 @@ import cox5529.catan.board.CatanSpace;
 import cox5529.catan.board.building.CatanBuilding;
 import cox5529.catan.board.building.City;
 import cox5529.catan.board.building.Settlement;
-import cox5529.catan.devcard.DevelopmentCard;
-import cox5529.catan.devcard.Knight;
-import cox5529.catan.devcard.Monopoly;
-import cox5529.catan.devcard.RoadBuilding;
+import cox5529.catan.devcard.*;
 import org.java_websocket.WebSocket;
 
 import java.lang.reflect.Array;
@@ -391,7 +388,6 @@ public abstract class Player {
 			player.getBuildings().add(building);
 			building.setPlayer(player);
 		}
-		player.getDevCards().add(new RoadBuilding());
 		return player;
 	}
 
