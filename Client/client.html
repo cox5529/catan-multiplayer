@@ -1099,7 +1099,12 @@
 			playerList += "<h6 class='card-subtitle mb-2 text-muted'>" + teams[player.team].color + "</h6>";
 			playerList += "<div>Cards: " + player.cards + "</div>";
 			playerList += "<div>Dev Cards: " + player.devCards + "</div>";
-			playerList += "<div>Played Dev Cards: " + player.playedDevCards + "</div>";
+			playerList += "<div>Played Dev Cards: ";
+			for(var j = 0; j < player.playedDevCards.length; j++) {
+				if(j != 0) playerList += ", ";
+				playerList += player.playedDevCards[j].name;
+			}
+			playerList += "</div>";
 			$("#player-" + i).html(playerList);
 		}
 	}
