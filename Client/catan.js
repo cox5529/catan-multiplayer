@@ -505,7 +505,7 @@ function acceptOffer(data) {
 			socket.send(RESPONSE + " " + TRADE + " " + params);
 			updateForm("", null);
 		} else if(val == 'Reject') {
-			socket.send(RESPONSE + " " + TRADE + " reject");
+			socket.send(RESPONSE + " " + TRADE + "reject");
 			updateForm("", null);
 		}
 	};
@@ -563,13 +563,13 @@ function selectOffer(responses) {
 		}
 		html += "				</tbody>";
 		html += "			</table><br />";
-		html += "			<input type='submit' name='action' class='btn btn-primary' value='Cancel' />";
 		html += "		</div>";
 		html += "	</div>";
 		html += "</div>";
 		playerId++;
 	}
-	html += "</div>";
+	html += "</div><br />";
+	html += "<input type='submit' name='action' class='btn btn-primary' value='Cancel' />";
 	
 	var onsubmit = function(e) {
 		e.preventDefault();
