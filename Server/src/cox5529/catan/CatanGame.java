@@ -237,16 +237,20 @@ public class CatanGame implements Runnable {
 				doTurn(player);
 				int roadLen = player.calculateRoadLength();
 				if (roadLen >= 5 && longestRoad != player) {
-					if (longestRoad == null) longestRoad = player;
-					else if (roadLen > longestRoad.calculateRoadLength()) {
-						broadcastConsoleMessage(player.getName() + " now possesses the longest road!");
+					if (longestRoad == null) {
 						longestRoad = player;
+						broadcastConsoleMessage(player.getName() + " now possesses the longest road!");
+					} else if (roadLen > longestRoad.calculateRoadLength()) {
+						longestRoad = player;
+						broadcastConsoleMessage(player.getName() + " now possesses the longest road!");
 					}
 				}
 				int armySize = player.getArmySize();
 				if (armySize >= 3 && largestArmy != player) {
-					if (largestArmy == null) largestArmy = player;
-					else if (armySize > largestArmy.getArmySize()) {
+					if (largestArmy == null) {
+						largestArmy = player;
+						broadcastConsoleMessage(player.getName() + " now possesses the largest army!");
+					} else if (armySize > largestArmy.getArmySize()) {
 						broadcastConsoleMessage(player.getName() + " now possesses the largest army!");
 						largestArmy = player;
 					}

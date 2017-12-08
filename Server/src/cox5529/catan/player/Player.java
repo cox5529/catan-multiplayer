@@ -230,6 +230,7 @@ public abstract class Player {
 					hand.removeCard(Card.Stone);
 					hand.removeCard(Card.Wheat);
 					devCards.add(card);
+					game.broadcastGameState();
 					return 0;
 				} else {
 					return 2;
@@ -247,6 +248,7 @@ public abstract class Player {
 					hand.removeCard(Card.Wood);
 					hand.removeCard(Card.Wheat);
 					hand.removeCard(Card.Brick);
+					game.broadcastGameState();
 					return 0;
 				} else {
 					return 1;
@@ -266,6 +268,7 @@ public abstract class Player {
 					roads.add(link);
 					hand.removeCard(Card.Brick);
 					hand.removeCard(Card.Wood);
+					game.broadcastGameState();
 					return 0;
 				}
 				return 1;
@@ -291,6 +294,7 @@ public abstract class Player {
 					hand.removeCard(Card.Stone);
 					hand.removeCard(Card.Stone);
 					hand.removeCard(Card.Stone);
+					game.broadcastGameState();
 					return 0;
 				} else {
 					return 1;

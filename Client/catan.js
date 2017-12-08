@@ -1,6 +1,5 @@
 var socket;
 var state = 0;
-var username = "Brandon";
 var team = 0;
 
 var board = {};
@@ -19,7 +18,7 @@ var onInput = null;
 var inputArg = null;
 
 $(document).ready(function (){
-	socket = new WebSocket("ws://10.30.53.185:1185");
+	socket = new WebSocket(address);
 	
 	socket.onmessage = function(event) {
 		var msg = event.data;
@@ -99,11 +98,11 @@ function discard(amount) {
 	html += "</thead><tbody>";
 	html += "<tr>";
 	html += "	<td>Discard</td>";
-	html += "	<td><img src='images/wood.png' class='resource-icon' /></td>";
-	html += "	<td><img src='images/sheep.png' class='resource-icon' /></td>";
-	html += "	<td><img src='images/wheat.png' class='resource-icon' /></td>";
-	html += "	<td><img src='images/stone.png' class='resource-icon' /></td>";
-	html += "	<td><img src='images/brick.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "wood.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "sheep.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "wheat.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "stone.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "brick.png' class='resource-icon' /></td>";
 	html += "</tr>";
 	html += "<tr>";
 	html += "	<td></td>";
@@ -174,11 +173,11 @@ function yearOfPlenty() {
 	html += "</thead><tbody>";
 	html += "<tr>";
 	html += "	<td>Discard</td>";
-	html += "	<td><img src='images/wood.png' class='resource-icon' /></td>";
-	html += "	<td><img src='images/sheep.png' class='resource-icon' /></td>";
-	html += "	<td><img src='images/wheat.png' class='resource-icon' /></td>";
-	html += "	<td><img src='images/stone.png' class='resource-icon' /></td>";
-	html += "	<td><img src='images/brick.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "wood.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "sheep.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "wheat.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "stone.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "brick.png' class='resource-icon' /></td>";
 	html += "</tr>";
 	html += "<tr>";
 	html += "	<td></td>";
@@ -247,19 +246,19 @@ function doTurn() {
 	html += "<table class='table'><thead><tr><th>Action</th><th>Requirements</th></tr></thead><tbody>";
 	html += "<tr>";
 	html += "	<td><input type='submit' class='btn btn-primary' name='action' value='Build Settlement' /></td>";
-	html += "	<td><img src='images/brick.png' class='resource-icon'/><img src='images/wheat.png' class='resource-icon'/><img src='images/wood.png' class='resource-icon'/><img src='images/sheep.png' class='resource-icon'/></td>";
+	html += "	<td><img src='" + imageDirectory + "brick.png' class='resource-icon'/><img src='" + imageDirectory + "wheat.png' class='resource-icon'/><img src='" + imageDirectory + "wood.png' class='resource-icon'/><img src='" + imageDirectory + "sheep.png' class='resource-icon'/></td>";
 	html += "</tr>";
 	html += "<tr>";
 	html += "	<td><input type='submit' class='btn btn-primary' name='action' value='Build City' /></td>";
-	html += "	<td><img src='images/stone.png' class='resource-icon'/><img src='images/stone.png' class='resource-icon'/><img src='images/stone.png' class='resource-icon'/><img src='images/wheat.png' class='resource-icon'/><img src='images/wheat.png' class='resource-icon'/></td>";
+	html += "	<td><img src='" + imageDirectory + "stone.png' class='resource-icon'/><img src='" + imageDirectory + "stone.png' class='resource-icon'/><img src='" + imageDirectory + "stone.png' class='resource-icon'/><img src='" + imageDirectory + "wheat.png' class='resource-icon'/><img src='" + imageDirectory + "wheat.png' class='resource-icon'/></td>";
 	html += "</tr>";
 	html += "<tr>";
 	html += "	<td><input type='submit' class='btn btn-primary' name='action' value='Build Road' /></td>";
-	html += "	<td><img src='images/brick.png' class='resource-icon'/><img src='images/wood.png' class='resource-icon'/></td>";
+	html += "	<td><img src='" + imageDirectory + "brick.png' class='resource-icon'/><img src='" + imageDirectory + "wood.png' class='resource-icon'/></td>";
 	html += "</tr>";
 	html += "<tr>";
 	html += "	<td><input type='submit' class='btn btn-primary' name='action' value='Buy Development Card' /></td>";
-	html += "	<td><img src='images/stone.png' class='resource-icon'/><img src='images/wheat.png' class='resource-icon'/><img src='images/sheep.png' class='resource-icon'/></td>";
+	html += "	<td><img src='" + imageDirectory + "stone.png' class='resource-icon'/><img src='" + imageDirectory + "wheat.png' class='resource-icon'/><img src='" + imageDirectory + "sheep.png' class='resource-icon'/></td>";
 	html += "</tr>";
 	html += "<tr><td colspan='2'>";
 	if(devCards.knight.playable > 0)
@@ -393,11 +392,11 @@ function buildTradeMenu(data=null) {
 	html += "</thead><tbody>";
 	html += "<tr>";
 	html += "	<td>Give</td>";
-	html += "	<td><img src='images/wood.png' class='resource-icon' /></td>";
-	html += "	<td><img src='images/sheep.png' class='resource-icon' /></td>";
-	html += "	<td><img src='images/wheat.png' class='resource-icon' /></td>";
-	html += "	<td><img src='images/stone.png' class='resource-icon' /></td>";
-	html += "	<td><img src='images/brick.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "wood.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "sheep.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "wheat.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "stone.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "brick.png' class='resource-icon' /></td>";
 	html += "</tr>";
 	html += "<tr>";
 	html += "	<td></td>";
@@ -425,11 +424,11 @@ function buildTradeMenu(data=null) {
 	html += "</tr>";
 	html += "<tr>";
 	html += "	<td>Take</td>";
-	html += "	<td><img src='images/wood.png' class='resource-icon' /></td>";
-	html += "	<td><img src='images/sheep.png' class='resource-icon' /></td>";
-	html += "	<td><img src='images/wheat.png' class='resource-icon' /></td>";
-	html += "	<td><img src='images/stone.png' class='resource-icon' /></td>";
-	html += "	<td><img src='images/brick.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "wood.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "sheep.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "wheat.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "stone.png' class='resource-icon' /></td>";
+	html += "	<td><img src='" + imageDirectory + "brick.png' class='resource-icon' /></td>";
 	html += "</tr>";
 	html += "<tr>";
 	html += "	<td></td>";
@@ -502,7 +501,7 @@ function acceptOffer(data) {
 			params += $("#wheat-give-amt").html() + " ";
 			params += $("#stone-give-amt").html() + " ";
 			params += $("#brick-give-amt").html();
-			socket.send(RESPONSE + " " + TRADE + " " + params);
+			socket.send(RESPONSE + " " + TRADE + params);
 			updateForm("", null);
 		} else if(val == 'Reject') {
 			socket.send(RESPONSE + " " + TRADE + "reject");
@@ -542,19 +541,19 @@ function selectOffer(responses) {
 		html += "				<tbody>";
 		html += "					<tr>";
 		html += "						<td>You give:</td>";
-		html += "						<td><img class='resource-icon' src='images/wood.png' /> " + responses[i][0] + "</td>";
-		html += "						<td><img class='resource-icon' src='images/sheep.png' /> " + responses[i][1] + "</td>";
-		html += "						<td><img class='resource-icon' src='images/wheat.png' /> " + responses[i][2] + "</td>";
-		html += "						<td><img class='resource-icon' src='images/stone.png' /> " + responses[i][3] + "</td>";
-		html += "						<td><img class='resource-icon' src='images/brick.png' /> " + responses[i][4] + "</td>";
+		html += "						<td><img class='resource-icon' src='" + imageDirectory + "wood.png' /> " + responses[i][0] + "</td>";
+		html += "						<td><img class='resource-icon' src='" + imageDirectory + "sheep.png' /> " + responses[i][1] + "</td>";
+		html += "						<td><img class='resource-icon' src='" + imageDirectory + "wheat.png' /> " + responses[i][2] + "</td>";
+		html += "						<td><img class='resource-icon' src='" + imageDirectory + "stone.png' /> " + responses[i][3] + "</td>";
+		html += "						<td><img class='resource-icon' src='" + imageDirectory + "brick.png' /> " + responses[i][4] + "</td>";
 		html += "					</tr>";
 		html += "					<tr>";
 		html += "						<td>You take:</td>";
-		html += "						<td><img class='resource-icon' src='images/wood.png' /> " + responses[i][5] + "</td>";
-		html += "						<td><img class='resource-icon' src='images/sheep.png' /> " + responses[i][6] + "</td>";
-		html += "						<td><img class='resource-icon' src='images/wheat.png' /> " + responses[i][7] + "</td>";
-		html += "						<td><img class='resource-icon' src='images/stone.png' /> " + responses[i][8] + "</td>";
-		html += "						<td><img class='resource-icon' src='images/brick.png' /> " + responses[i][9] + "</td>";
+		html += "						<td><img class='resource-icon' src='" + imageDirectory + "wood.png' /> " + responses[i][5] + "</td>";
+		html += "						<td><img class='resource-icon' src='" + imageDirectory + "sheep.png' /> " + responses[i][6] + "</td>";
+		html += "						<td><img class='resource-icon' src='" + imageDirectory + "wheat.png' /> " + responses[i][7] + "</td>";
+		html += "						<td><img class='resource-icon' src='" + imageDirectory + "stone.png' /> " + responses[i][8] + "</td>";
+		html += "						<td><img class='resource-icon' src='" + imageDirectory + "brick.png' /> " + responses[i][9] + "</td>";
 		html += "					</tr>";
 		if(allow) {
 			html += "				<tr>";
@@ -577,7 +576,7 @@ function selectOffer(responses) {
 		var val = clicked.attr('value');
 		var tradeId = clicked.attr('tradeId');
 		if(tradeId == null) tradeId = -1;
-		socket.send(RESPONSE + " " + TRADE + " " + tradeId);
+		socket.send(RESPONSE + " " + TRADE + "" + tradeId);
 		doTurn();
 	};
 	updateForm(html, onsubmit);
@@ -825,11 +824,11 @@ function isValidRoad(start, stop) {
 
 function doMonopoly() {
 	var html = "<p>Which resource would you like to monopolize?</p>";
-	html += "<input type='image' src='images/wood.png' value='wood' class='resource-icon-lg' /> ";
-	html += "<input type='image' src='images/sheep.png' value='sheep' class='resource-icon-lg' /> ";
-	html += "<input type='image' src='images/wheat.png' value='wheat' class='resource-icon-lg' /> ";
-	html += "<input type='image' src='images/stone.png' value='stone' class='resource-icon-lg' /> ";
-	html += "<input type='image' src='images/brick.png' value='brick' class='resource-icon-lg' /> ";
+	html += "<input type='image' src='" + imageDirectory + "wood.png' value='wood' class='resource-icon-lg' /> ";
+	html += "<input type='image' src='" + imageDirectory + "sheep.png' value='sheep' class='resource-icon-lg' /> ";
+	html += "<input type='image' src='" + imageDirectory + "wheat.png' value='wheat' class='resource-icon-lg' /> ";
+	html += "<input type='image' src='" + imageDirectory + "stone.png' value='stone' class='resource-icon-lg' /> ";
+	html += "<input type='image' src='" + imageDirectory + "brick.png' value='brick' class='resource-icon-lg' /> ";
 	html += "<br /><input type='submit' class='btn btn-primary' value='Cancel' />";
 	var onsubmit = function(e) {
 		e.preventDefault();
