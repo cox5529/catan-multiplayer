@@ -345,7 +345,7 @@ public class RemotePlayer extends Player {
 		String response = this.response.poll();
 		String prefix = TRADE + "";
 		if (response.startsWith(prefix)) {
-			return Integer.parseInt(response.substring(prefix.length() + 1));
+			return Integer.parseInt(response.substring(prefix.length()));
 		}
 		return -1;
 	}

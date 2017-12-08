@@ -576,7 +576,7 @@ function selectOffer(responses) {
 		var val = clicked.attr('value');
 		var tradeId = clicked.attr('tradeId');
 		if(tradeId == null) tradeId = -1;
-		socket.send(RESPONSE + " " + TRADE + "" + tradeId);
+		socket.send(RESPONSE + "" + TRADE + "" + tradeId);
 		doTurn();
 	};
 	updateForm(html, onsubmit);
