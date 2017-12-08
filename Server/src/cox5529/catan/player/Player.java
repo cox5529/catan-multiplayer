@@ -94,9 +94,11 @@ public abstract class Player {
 			roads.add(link);
 			buildSettlement(spaceDiag, spaceCol, spaceId);
 			CatanSpace space = board.findSpace(spaceDiag, spaceCol, spaceId);
-			for (CatanTile tile : space.getTiles()) {
-				if (tile.getResource() != Card.None) {
-					hand.addCard(tile.getResource());
+			if (giveCards) {
+				for (CatanTile tile : space.getTiles()) {
+					if (tile.getResource() != Card.None) {
+						hand.addCard(tile.getResource());
+					}
 				}
 			}
 		} else {
