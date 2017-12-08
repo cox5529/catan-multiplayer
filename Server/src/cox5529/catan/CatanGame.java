@@ -229,7 +229,7 @@ public class CatanGame implements Runnable {
 			Player player = players.get(cur);
 			broadcastConsoleMessage("It is now " + player.getName() + "'s turn to place.");
 			broadcastGameState();
-			player.place(board, buildPlayerData(), true);
+			player.place(board, buildPlayerData(), false);
 		} while (cur != first);
 		boolean game = true;
 		while (game) {
