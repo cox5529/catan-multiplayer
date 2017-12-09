@@ -35,7 +35,7 @@ function updateRoads(list) {
 		if(idx1 < 0) idx1 += 6;
 		var idx2 = list[i].position;
 		
-		if(list[i].road != -1) {
+		if(list[i].road !== -1) {
 			roads.push({team: list[i].road, start: {x: x[idx1], y: y[idx1]}, stop: {x: x[idx2], y: y[idx2]}});
 		}
 	}
@@ -88,17 +88,17 @@ function drawHexes(canvas, tiles, highlightSpaces=0, init=false, center) {
 		var row = [];
 		for(var j = 0; j < tiles[i].length; j++) {
 			if(tiles[i][j] != null) {
-				if(tiles[i][j].resource == "Wheat") {
+				if(tiles[i][j].resource === "Wheat") {
 					canvas.fillStyle = WHEAT_COLOR;
-				} else if(tiles[i][j].resource == "Sheep") {
+				} else if(tiles[i][j].resource === "Sheep") {
 					canvas.fillStyle = SHEEP_COLOR;
-				} else if(tiles[i][j].resource == "Stone") {
+				} else if(tiles[i][j].resource === "Stone") {
 					canvas.fillStyle = STONE_COLOR;
-				} else if(tiles[i][j].resource == "Brick") {
+				} else if(tiles[i][j].resource === "Brick") {
 					canvas.fillStyle = BRICK_COLOR;
-				} else if(tiles[i][j].resource == "Wood") {
+				} else if(tiles[i][j].resource === "Wood") {
 					canvas.fillStyle = WOOD_COLOR;
-				} else if(tiles[i][j].resource == "None") {
+				} else if(tiles[i][j].resource === "None") {
 					canvas.fillStyle = DESERT_COLOR;
 				} 
 				var xOffset = j * HEX_WIDTH * 3 / 4;
@@ -160,7 +160,7 @@ function drawHexes(canvas, tiles, highlightSpaces=0, init=false, center) {
 				
 				drawSpaces(canvas, tiles[i][j], j, i, highlightSpaces, init, center);
 				
-				if(tiles[i][j].resource != "None") {
+				if(tiles[i][j].resource !== "None") {
 					var horizontalOffset = xOffset + xOffsetGlobal + HEX_WIDTH / 2;
 					var verticalOffset = yOffset + yOffsetGlobal + HEX_HEIGHT / 2
 					
@@ -171,7 +171,7 @@ function drawHexes(canvas, tiles, highlightSpaces=0, init=false, center) {
 					
 					
 					canvas.font = "20px Arial";
-					if(tiles[i][j].roll == 6 || tiles[i][j].roll == 8) {
+					if(tiles[i][j].roll === 6 || tiles[i][j].roll === 8) {
 						canvas.fillStyle = RED_NUMBER_COLOR;
 					} else {
 						canvas.fillStyle = NORMAL_NUMBER_COLOR;
@@ -214,19 +214,19 @@ function drawSpaces(canvas, tile, column, diagonal, highlightSpaces, init, cente
 		}
 		
 		
-		if(highlightSpaces == 2 && space.building != null && isValidCity({x: x, y: y})) {
+		if(highlightSpaces === 2 && space.building != null && isValidCity({x: x, y: y})) {
 			canvas.fillStyle = "#000";
 			canvas.beginPath();
 			canvas.arc(x, y, 15, 0, 2 * Math.PI);
 			canvas.closePath();
 			canvas.fill();
-		} else if(highlightSpaces == 3 && center != null && isValidSteal({x: x, y: y}, center)) {
+		} else if(highlightSpaces === 3 && center != null && isValidSteal({x: x, y: y}, center)) {
 			canvas.fillStyle = "#000";
 			canvas.beginPath();
 			canvas.arc(x, y, 15, 0, 2 * Math.PI);
 			canvas.closePath();
 			canvas.fill();
-		} else if(space.building != null || (highlightSpaces == 1 && isValidSettlement({x: x, y: y}, true))) {
+		} else if(space.building != null || (highlightSpaces === 1 && isValidSettlement({x: x, y: y}, true))) {
 			if(space.building == null) {
 				canvas.fillStyle = "#000";
 				canvas.beginPath();
@@ -235,7 +235,7 @@ function drawSpaces(canvas, tile, column, diagonal, highlightSpaces, init, cente
 				var team = space.building.player.team;
 				canvas.fillStyle = teams[team].hexColor;
 				canvas.beginPath();
-				if(space.building.type == "city") {
+				if(space.building.type === "city") {
 					canvas.arc(x, y, 10, 0, 2 * Math.PI);
 				} else {
 					canvas.moveTo(x - 5, y - 5);
@@ -250,7 +250,7 @@ function drawSpaces(canvas, tile, column, diagonal, highlightSpaces, init, cente
 			canvas.fill();
 			canvas.beginPath();
 			if(space.building != null) {
-				if(space.building.type == "city") {
+				if(space.building.type === "city") {
 					canvas.arc(x, y, 10, 0, 2 * Math.PI);
 				} else {
 					canvas.moveTo(x - 5, y - 5);
@@ -268,11 +268,11 @@ function drawSpaces(canvas, tile, column, diagonal, highlightSpaces, init, cente
 
 function drawLinks(canvas, links, highlight=false, center=null, highlightSpaces) {
 	var list = links;
-	if(center != null && highlightSpaces != 3) {
+	if(center != null && highlightSpaces !== 3) {
 		list = [];
 		var point = center.hex.points[center.space];
 		for(var i = 0; i < links.length; i++) {
-			if(links[i].road != -1 )
+			if(links[i].road !== -1 )
 				list.push(links[i]);
 			else {
 				var x = [];
@@ -327,10 +327,10 @@ function drawLinks(canvas, links, highlight=false, center=null, highlightSpaces)
 		if(idx1 < 0) idx1 += 6;
 		var idx2 = list[i].position;
 		canvas.strokeStyle = "#000";
-		if(list[i].road != -1) {
+		if(list[i].road !== -1) {
 			canvas.strokeStyle = teams[list[i].road].hexColor;
 		}
-		if(list[i].road != -1 || (highlight && (center != null || isValidRoad({x: x[idx1], y: y[idx1]}, {x: x[idx2], y: y[idx2]})))) {
+		if(list[i].road !== -1 || (highlight && (center != null || isValidRoad({x: x[idx1], y: y[idx1]}, {x: x[idx2], y: y[idx2]})))) {
 			canvas.lineWidth = 5;
 			canvas.beginPath();
 			canvas.moveTo(x[idx1], y[idx1]);
@@ -371,17 +371,17 @@ function drawPorts(canvas, ports) {
 			var mY = (y[idx1] + y[idx2]) / 2;
 			var slope = -(x[idx1] - x[idx2]) / (y[idx1] - y[idx2]);
 			var dx = HEX_SIDE / Math.sqrt(1 + slope * slope);
-			if(lin.position == 5 || lin.position == 0) {
+			if(lin.position === 5 || lin.position === 0) {
 				dx *= -1;
 			}
 			var dy = slope * dx;
 			
 			var portX = mX + dx;
 			var portY = mY + dy;
-			if(slope == Infinity) {
+			if(slope === Infinity) {
 				portX = mX;
 				portY = mY - HEX_SIDE;
-			} else if(slope == -1 * Infinity) {
+			} else if(slope === -1 * Infinity) {
 				portX = mX;
 				portY = mY + HEX_SIDE;
 			}
@@ -403,17 +403,17 @@ function drawPorts(canvas, ports) {
 			canvas.closePath();
 			canvas.stroke();
 			
-			if(port.type == "Wheat") {
+			if(port.type === "Wheat") {
 				canvas.fillStyle = WHEAT_COLOR;
-			} else if(port.type == "Sheep") {
+			} else if(port.type === "Sheep") {
 				canvas.fillStyle = SHEEP_COLOR;
-			} else if(port.type == "Stone") {
+			} else if(port.type === "Stone") {
 				canvas.fillStyle = STONE_COLOR;
-			} else if(port.type == "Brick") {
+			} else if(port.type === "Brick") {
 				canvas.fillStyle = BRICK_COLOR;
-			} else if(port.type == "Wood") {
+			} else if(port.type === "Wood") {
 				canvas.fillStyle = WOOD_COLOR;
-			} else if(port.type == "All") {
+			} else if(port.type === "All") {
 				canvas.fillStyle = ALL_PORT_COLOR;
 			}
 			canvas.beginPath();
