@@ -25,6 +25,8 @@ public class CatanGame implements Runnable {
 	private Player longestRoad;
 	private Player largestArmy;
 
+	private boolean kill;
+
 	public CatanGame(int playerCount) {
 		board = CatanBoard.generate();
 		players = new ArrayList<>();
@@ -80,6 +82,13 @@ public class CatanGame implements Runnable {
 		players.remove(player);
 		broadcastGameState();
 		broadcastConsoleMessage(player.getName() + " has left the game. Reason: " + reason);
+		boolean allAI = true;
+		for (Player p : players) {
+			allAI &= (p instanceof AIPlayer);
+		}
+		if (allAI) {
+			kill = true;
+		}
 	}
 
 	public void broadcastGameState() {
@@ -275,7 +284,7 @@ public class CatanGame implements Runnable {
 			player.place(board, buildPlayerData(), false);
 		} while (cur != first);
 		boolean game = true;
-		while (game) {
+		while (game && !kill) {
 			for (Player player : players) {
 				doTurn(player);
 				int roadLen = player.calculateRoadLength();
