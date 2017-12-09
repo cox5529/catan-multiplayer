@@ -57,14 +57,16 @@ $(document).ready(function () {
 			acceptOffer(JSON.parse(msg));
 		} else if (protocol === ROBBER_DISCARD) {
 			discard(parseInt(msg));
+		} else if (protocol === GAMESTATE_LOBBY) {
+			updateLobby(JSON.parse(msg));
 		} else {
 			console.log(event.data);
 		}
-	}
+	};
 	
 	socket.onopen = function (event) {
 		socket.send(INFORMATION_USERNAME + "" + username);
-	}
+	};
 	
 	var onsubmit = function (e) {
 		e.preventDefault();
@@ -74,18 +76,98 @@ $(document).ready(function () {
 		data.push(val);
 		
 		if (data[1].value === "New Game") {
-			socket.send(GAME_START + " " + data[0].value);
+			newGame(data[0].value);
 		} else {
-			socket.send(GAME_JOIN + " " + data[0].value);
+			socket.send(GAME_JOIN + "" + data[0].value);
+			form.html("");
 		}
-		form.html("");
 	};
 	
 	updateForm(null, onsubmit);
-	var board = $("#board");
-	xOffsetGlobal = board[0].width / 2 - 4 * HEX_WIDTH / 2;
-	yOffsetGlobal = board[0].height / 2 - 5 * HEX_HEIGHT / 2;
+	var b = $("#board");
+	xOffsetGlobal = b[0].width / 2 - 4 * HEX_WIDTH / 2;
+	yOffsetGlobal = b[0].height / 2 - 5 * HEX_HEIGHT / 2;
 });
+
+function newGame(name) {
+	var form = $("#form");
+	var html = "<table class='table table-sm'>";
+	html += "<tbody>"
+	html += "<tr><td><input type='submit' class='btn btn-sm btn-secondary' name='action' value='-' /></td>";
+	html += "<td><span id='player-amt'>3</span></td>";
+	html += "<td><input type='submit' class='btn btn-sm btn-secondary' name='action' value='+' /></td></tr>";
+	html += "<tr><td><input type='submit' class='btn btn-primary' value='Submit' /></td></tr>";
+	html += "</tbody>";
+	html += "</table>";
+	
+	var onsubmit = function (ev, n=name) {
+		ev.preventDefault();
+		var clicked = $("input[type=submit][clicked=true]");
+		var val = clicked.attr('value');
+		var counter = $("#player-amt");
+		
+		if (val === "Submit") {
+			var amt = counter.html();
+			socket.send(GAME_START + "" + amt + "" + n);
+			updateForm("", null);
+		} else {
+			var change = 0;
+			if (val === '+') change = 1;
+			else change = -1;
+			var count = parseInt(counter.html());
+			count += change;
+			if (count >= 3 && count <= 4)
+				counter.html("" + count);
+		}
+	};
+	updateForm(html, onsubmit);
+}
+
+function updateLobby(lobby) {
+	if ($("#lobby-table").length === 0) {
+		buildLobby(lobby);
+		return;
+	}
+	for (var i = 0; i < lobby.length; i++) {
+		var player = lobby[i];
+		if (player.ready) {
+			$("#" + i + "-ready").html("check");
+		} else {
+			$("#" + i + "-ready").html("clear");
+		}
+	}
+}
+
+function buildLobby(lobby) {
+	var html = "<table id='lobby-table' class='table table-sm'>";
+	html += "<thead>";
+	html += "   <tr>";
+	html += "       <th>Player</th><th>Ready</th>"
+	html += "   </tr>";
+	html += "</thead>";
+	html += "<tbody>";
+	for (var i = 0; i < lobby.length; i++) {
+		var player = lobby[i];
+		html += "<tr>";
+		html += "   <td>" + player.name + "</td>";
+		if (player.ready) {
+			html += "<td><i id='" + i + "-ready' class='material-icons'>check</i></td>";
+		} else {
+			html += "<td><i id='" + i + "-ready' class='material-icons'>clear</i></td>";
+		}
+		html += "</tr>";
+	}
+	html += "</tbody>";
+	html += "</table>";
+	html += "<input type='submit' name='action' class='btn btn-primary' value='Toggle Ready' />";
+	
+	var onsubmit = function (ev) {
+		ev.preventDefault();
+		socket.send("" + READY);
+	};
+	
+	updateForm(html, onsubmit);
+}
 
 function isNumber(c) {
 	return c >= '0' && c <= '9';
@@ -145,13 +227,13 @@ function discard(amount) {
 		}
 		if (counter != null) {
 			var change = 0;
-			if (val == '+') change = 1;
+			if (val === '+') change = 1;
 			else change = -1;
 			var count = parseInt(counter.html());
 			count += change;
 			if (count >= 0)
 				counter.html("" + count);
-		} else if (val == 'Submit') {
+		} else if (val === 'Submit') {
 			var params = "";
 			params += $("#wood-give-amt").html() + " ";
 			params += $("#sheep-give-amt").html() + " ";
@@ -336,7 +418,11 @@ function roadBuliding() {
 function setRoad(diag, col, pos) {
 	for (var i = 0; i < board.links.length; i++) {
 		var link = board.links[i];
-		if (isSameRoad({diag: diag, col: col, pos: pos}, {diag: link.diagonal, col: link.column, pos: link.position})) {
+		if (isSameRoad({diag: diag, col: col, pos: pos}, {
+				diag: link.diagonal,
+				col: link.column,
+				pos: link.position
+			})) {
 			link.road = team;
 			break;
 		}
@@ -462,7 +548,7 @@ function buildTradeMenu(data=null) {
 	html += "	<td><input type='submit' resource='stone' class='btn btn-sm btn-secondary take' name='action' value='-'/></td>";
 	html += "	<td><input type='submit' resource='brick' class='btn btn-sm btn-secondary take' name='action' value='-'/></td>";
 	html += "</tr>";
-	html += "<tr><td colspan='2'>"
+	html += "<tr><td colspan='2'>";
 	if (data == null) {
 		html += "<input type='submit' class='btn btn-primary btn-sm' name='action' value='Submit' />";
 	} else {
@@ -627,7 +713,7 @@ function playerTrade() {
 			socket.send(RESPONSE + "" + TRADE_PLAYERS + "" + params);
 			updateForm("Waiting for all players to respond to offer...", null);
 		}
-	}
+	};
 	
 	updateForm(html, onsubmit);
 }
@@ -1089,8 +1175,8 @@ function updatePlayers(players) {
 }
 
 function showMessage(message) {
-	var console = $("#console");
-	console.append("<div>" + message + "</div><br / >");
-	console.stop().animate({scrollTop: console[0].scrollHeight}, 1000);
+	var consoleElement = $("#console");
+	consoleElement.append("<div>" + message + "</div><br / >");
+	consoleElement.stop().animate({scrollTop: consoleElement[0].scrollHeight}, 1000);
 	console.log(message);
 }

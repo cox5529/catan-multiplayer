@@ -19,16 +19,16 @@ public class CatanGame implements Runnable {
 
 	private CatanBoard board;
 	private int id;
-	private ArrayList<Player> players;
+	private final ArrayList<Player> players;
 	private ArrayList<DevelopmentCard> devCardDeck;
 
 	private Player longestRoad;
 	private Player largestArmy;
 
-	public CatanGame() {
+	public CatanGame(int playerCount) {
 		board = CatanBoard.generate();
 		players = new ArrayList<>();
-		for (int i = 0; i < 4; i++) {
+		for (int i = 0; i < playerCount; i++) {
 			players.add(new AIPlayer(i, this));
 		}
 		devCardDeck = new ArrayList<>();
@@ -52,12 +52,14 @@ public class CatanGame implements Runnable {
 
 	public void addPlayer(RemotePlayer player) {
 		player.setGame(this);
-		for (int i = 0; i < players.size(); i++) {
-			if (players.get(i) instanceof AIPlayer) {
-				RemotePlayer remotePlayer = players.get(i).toRemotePlayer(player);
-				remotePlayer.setName(player.getName());
-				players.set(i, remotePlayer);
-				break;
+		synchronized (players) {
+			for (int i = 0; i < players.size(); i++) {
+				if (players.get(i) instanceof AIPlayer) {
+					RemotePlayer remotePlayer = players.get(i).toRemotePlayer(player);
+					remotePlayer.setName(player.getName());
+					players.set(i, remotePlayer);
+					break;
+				}
 			}
 		}
 		broadcastGameState();
@@ -94,10 +96,10 @@ public class CatanGame implements Runnable {
 			pdata.setDevCards(player.getDevCards().size());
 			pdata.setPlayedDevCards(player.getPlayedDevCards());
 			String name = player.getName();
-			if(largestArmy == player) {
+			if (largestArmy == player) {
 				name += " <i class=\"material-icons\">group</i>";
 			}
-			if(longestRoad == player) {
+			if (longestRoad == player) {
 				name += " <i class=\"material-icons\">map</i>";
 			}
 			pdata.setName(name);
@@ -218,9 +220,43 @@ public class CatanGame implements Runnable {
 		return vp;
 	}
 
+	public void broadcastLobby() {
+		String message = "[";
+		for (Player player : players) {
+			if (!message.equals("[")) message += ",";
+			message += player.toLobbyObject();
+		}
+		message += "]";
+		for (Player player : players) {
+			if (player instanceof RemotePlayer) {
+				((RemotePlayer) player).sendLobby(message);
+			}
+		}
+	}
+
+	private void lobby() {
+		boolean ready = false;
+		while (!ready) {
+			broadcastLobby();
+			ready = true;
+			synchronized (players) {
+				for (Player player : players) {
+					ready &= player.isReady();
+				}
+			}
+			try {
+				Thread.sleep(100);
+			} catch (Exception e) {
+			}
+		}
+	}
+
 	@Override
 	public void run() {
-		int first = (int) (Math.random() * 4);
+		//lobby state
+		lobby();
+		//game state
+		int first = (int) (Math.random() * players.size());
 		int cur = first;
 		do {
 			Player player = players.get(cur);
@@ -228,11 +264,11 @@ public class CatanGame implements Runnable {
 			broadcastGameState();
 			player.place(board, buildPlayerData(), true);
 			cur++;
-			if (cur == 4) cur = 0;
+			if (cur == players.size()) cur = 0;
 		} while (cur != first);
 		do {
 			cur--;
-			if (cur == -1) cur = 3;
+			if (cur == -1) cur = players.size() - 1;
 			Player player = players.get(cur);
 			broadcastConsoleMessage("It is now " + player.getName() + "'s turn to place.");
 			broadcastGameState();

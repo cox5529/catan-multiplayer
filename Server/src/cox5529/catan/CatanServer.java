@@ -61,8 +61,8 @@ public class CatanServer extends WebSocketServer {
 
 	}
 
-	public void startGame(String key, RemotePlayer creator) {
-		CatanGame game = new CatanGame();
+	public void startGame(String key, RemotePlayer creator, int players) {
+		CatanGame game = new CatanGame(players);
 		game.setId(nextGameID);
 		nextGameID++;
 		games.put(key, game);

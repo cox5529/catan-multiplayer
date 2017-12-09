@@ -2,7 +2,6 @@ function drawBoard(highlightSpaces=0, highlightLinks=false, center=null, init=fa
 	var canvas = $("#board")[0].getContext('2d');
 	canvas.fillStyle = WATER_COLOR;
 	canvas.fillRect(0, 0, 600, 600);
-	
 	updateSettlements(board.tiles);
 	updateRoads(board.links);
 
@@ -162,7 +161,7 @@ function drawHexes(canvas, tiles, highlightSpaces=0, init=false, center) {
 				
 				if(tiles[i][j].resource !== "None") {
 					var horizontalOffset = xOffset + xOffsetGlobal + HEX_WIDTH / 2;
-					var verticalOffset = yOffset + yOffsetGlobal + HEX_HEIGHT / 2
+					var verticalOffset = yOffset + yOffsetGlobal + HEX_HEIGHT / 2;
 					
 					canvas.fillStyle = NUMBER_BG_COLOR;
 					canvas.beginPath();

@@ -62,6 +62,8 @@ public abstract class Player {
 
 	public abstract int[] getDiscard(CatanBoard board, ArrayList<PlayerData> players, int amount);
 
+	public abstract boolean isReady();
+
 	public final void onSeven(CatanBoard board, ArrayList<PlayerData> players) {
 		if (hand.getSize() > 7) {
 			int amt = hand.getSize() / 2;
@@ -77,6 +79,10 @@ public abstract class Player {
 			}
 			game.broadcastConsoleMessage("The robber has stolen " + a + " cards from " + name + ".");
 		}
+	}
+
+	public String toLobbyObject() {
+		return String.format("{\"name\":\"%s\",\"ready\":%b}", name, isReady());
 	}
 
 	public void place(CatanBoard board, ArrayList<PlayerData> players, boolean giveCards) {

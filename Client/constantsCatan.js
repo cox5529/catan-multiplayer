@@ -35,6 +35,9 @@ const GAMESTATE_BOARD = 80;
 const GAMESTATE_PLAYERS = 81;
 const GAMESTATE_HAND = 82;
 const GAMESTATE_DEV_CARDS = 83;
+const GAMESTATE_LOBBY = 84;
+
+const READY = 90;
 
 const SHEEP_COLOR = "#a8d242";
 const WHEAT_COLOR = "#ffd300";

@@ -44,14 +44,19 @@ public class RemotePlayer extends Player {
 	public static final int GAMESTATE_PLAYERS = 81;
 	public static final int GAMESTATE_HAND = 82;
 	public static final int GAMESTATE_DEV_CARDS = 83;
+	public static final int GAMESTATE_LOBBY = 84;
+
+	public static final int READY = 90;
 
 	@JsonIgnore
 	private WebSocket connection;
+	private boolean ready;
 	private final Queue<String> response;
 
 	public RemotePlayer(WebSocket connection) {
 		super();
 		this.connection = connection;
+		ready = false;
 		response = new LinkedList<>();
 	}
 
@@ -61,10 +66,16 @@ public class RemotePlayer extends Player {
 
 	public void onMessage(CatanServer server, String message) {
 		if (message.startsWith("" + GAME_START)) {
-			String key = message.substring(2);
-			server.startGame(key, this);
+			int players = Integer.parseInt(message.substring(2, 3));
+			String key;
+			if (message.length() > 3) {
+				key = message.substring(3);
+			} else key = "";
+			server.startGame(key, this, players);
 		} else if (message.startsWith("" + GAME_JOIN)) {
-			String key = message.substring(2);
+			String key;
+			if(message.length() == 2) key = "";
+			else key = message.substring(2);
 			server.getGame(key).addPlayer(this);
 		} else if (message.startsWith("" + INFORMATION_USERNAME)) {
 			this.name = message.substring(2);
@@ -72,7 +83,13 @@ public class RemotePlayer extends Player {
 			synchronized (response) {
 				this.response.add(message.substring(1));
 			}
+		} else if (message.startsWith(READY + "")) {
+			ready = !ready;
 		}
+	}
+
+	public void sendLobby(String lobby) {
+		send(GAMESTATE_LOBBY, lobby);
 	}
 
 	@Override
@@ -392,6 +409,11 @@ public class RemotePlayer extends Player {
 		} while (!response.startsWith(prefix));
 		re += " " + response.substring(prefix.length());
 		return re;
+	}
+
+	@Override
+	public boolean isReady() {
+		return ready;
 	}
 
 	@Override

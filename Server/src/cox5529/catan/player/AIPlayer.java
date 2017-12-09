@@ -93,6 +93,11 @@ public class AIPlayer extends Player {
 	}
 
 	@Override
+	public boolean isReady() {
+		return true;
+	}
+
+	@Override
 	public String getPlacement(CatanBoard board, ArrayList<PlayerData> players, boolean giveCards) {
 		int[] ranking = getPriority();
 		ArrayList<CatanSpace> spaces = board.getSpaces();
