@@ -360,7 +360,7 @@ public abstract class Player {
 			ArrayList<Integer> possible = new ArrayList<>();
 			if (front.getBuilding() == null || front.getBuilding().getPlayer().getTeam() == team) {
 				for (CatanLink l : front.getLinks()) {
-					if (l != link && link.getRoad() == team) {
+					if (l != link && l.getRoad() == team) {
 						ArrayList<CatanLink> r = new ArrayList<>();
 						r.addAll(road);
 						possible.add(getLongestRoadFromSegment(l, r));
@@ -368,7 +368,7 @@ public abstract class Player {
 				}
 			} else if (rear.getBuilding() == null || rear.getBuilding().getPlayer().getTeam() == team) {
 				for (CatanLink l : rear.getLinks()) {
-					if (l != link && link.getRoad() == team) {
+					if (l != link && l.getRoad() == team) {
 						ArrayList<CatanLink> r = new ArrayList<>();
 						r.addAll(road);
 						possible.add(getLongestRoadFromSegment(l, r));

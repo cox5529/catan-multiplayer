@@ -84,7 +84,7 @@ public class AIPlayer extends Player {
 
 	@Override
 	public int[] moveRobber(CatanBoard board, ArrayList<PlayerData> players) {
-		return new int[]{(int) (Math.random() * 2 + 2), (int) (Math.random() * 2 + 1), 0};
+		return new int[]{(int) (Math.random() * 2 + 2), (int) (Math.random() * 2 + 1), (int) (Math.random() * 4)};
 	}
 
 	@Override

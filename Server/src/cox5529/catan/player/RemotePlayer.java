@@ -276,7 +276,7 @@ public class RemotePlayer extends Player {
 					}
 					game.broadcastConsoleMessage(name + " has just traded with " + game.getPlayers().get(res).getName() + ": " + trade + ".");
 				}
-			} else if(protocol == TURN_RB) {
+			} else if (protocol == TURN_RB) {
 				boolean valid = false;
 				DevelopmentCard c = null;
 				for (DevelopmentCard card : devCards) {
@@ -291,7 +291,7 @@ public class RemotePlayer extends Player {
 				} else {
 					sendConsoleMessage("You do not have a Road Building card to play.");
 				}
-			} else if(protocol == TURN_YOP) {
+			} else if (protocol == TURN_YOP) {
 				boolean valid = false;
 				DevelopmentCard c = null;
 				for (DevelopmentCard card : devCards) {
@@ -355,8 +355,9 @@ public class RemotePlayer extends Player {
 		send(ROBBER_DISCARD, amount + "");
 		waitForResponse();
 		String response = this.response.poll();
-		if (response.startsWith(ROBBER_DISCARD + "")) {
-			String[] data = response.split(" ");
+		String prefix = ROBBER_DISCARD + "";
+		if (response.startsWith(prefix)) {
+			String[] data = response.substring(prefix.length()).split(" ");
 			int[] re = new int[5];
 			for (int i = 0; i < 5; i++) {
 				re[i] = Integer.parseInt(data[i]);

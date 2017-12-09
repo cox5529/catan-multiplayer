@@ -93,7 +93,14 @@ public class CatanGame implements Runnable {
 			pdata.setCards(player.getHand().getSize());
 			pdata.setDevCards(player.getDevCards().size());
 			pdata.setPlayedDevCards(player.getPlayedDevCards());
-			pdata.setName(player.getName());
+			String name = player.getName();
+			if(largestArmy == player) {
+				name += " <i class=\"material-icons\">group</i>";
+			}
+			if(longestRoad == player) {
+				name += " <i class=\"material-icons\">map</i>";
+			}
+			pdata.setName(name);
 			data.add(pdata);
 		}
 		return data;
