@@ -84,12 +84,12 @@ public class AIPlayer extends Player {
 
 	@Override
 	public int[] moveRobber(CatanBoard board, ArrayList<PlayerData> players) {
-		return new int[]{(int) (Math.random() * 2 + 2), (int) (Math.random() * 2 + 1), (int) (Math.random() * 4)};
+		return new int[]{(int) (Math.random() * 2 + 2), (int) (Math.random() * 2 + 1), (int) (Math.random() * game.getPlayers().size())};
 	}
 
 	@Override
-	public void doTurn(CatanBoard board, ArrayList<PlayerData> players) {
-
+	public boolean doTurn(CatanBoard board, ArrayList<PlayerData> players) {
+		return true;
 	}
 
 	@Override

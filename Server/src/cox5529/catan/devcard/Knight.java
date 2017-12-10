@@ -11,7 +11,6 @@ public class Knight extends DevelopmentCard {
 
 	@Override
 	public boolean doAction(CatanGame game, Player player, String argument) {
-		game.moveRobber(player);
-		return true;
+		return game.moveRobber(player);
 	}
 }

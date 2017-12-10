@@ -9,6 +9,7 @@ import cox5529.catan.board.CatanBoard;
 import cox5529.catan.devcard.*;
 import org.java_websocket.WebSocket;
 
+import javax.rmi.CORBA.Util;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -52,12 +53,14 @@ public class RemotePlayer extends Player {
 	private WebSocket connection;
 	private boolean ready;
 	private final Queue<String> response;
+	private boolean closed;
 
 	public RemotePlayer(WebSocket connection) {
 		super();
 		this.connection = connection;
 		ready = false;
 		response = new LinkedList<>();
+		closed = false;
 	}
 
 	public WebSocket getConnection() {
@@ -74,7 +77,7 @@ public class RemotePlayer extends Player {
 			server.startGame(key, this, players);
 		} else if (message.startsWith("" + GAME_JOIN)) {
 			String key;
-			if(message.length() == 2) key = "";
+			if (message.length() == 2) key = "";
 			else key = message.substring(2);
 			server.getGame(key).addPlayer(this);
 		} else if (message.startsWith("" + INFORMATION_USERNAME)) {
@@ -86,6 +89,14 @@ public class RemotePlayer extends Player {
 		} else if (message.startsWith(READY + "")) {
 			ready = !ready;
 		}
+	}
+
+	public boolean isClosed() {
+		return closed;
+	}
+
+	public void setClosed(boolean closed) {
+		this.closed = closed;
 	}
 
 	public void sendLobby(String lobby) {
@@ -113,31 +124,37 @@ public class RemotePlayer extends Player {
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 		}
-		waitForResponse();
-		String response = this.response.poll();
-		String[] coords = response.split(" ");
-		int[] re = new int[3];
-		re[0] = Integer.parseInt(coords[0]);
-		re[1] = Integer.parseInt(coords[1]);
-		re[2] = Integer.parseInt(coords[2]);
-		return re;
+		if (waitForResponse()) {
+			String response = this.response.poll();
+			String[] coords = response.split(" ");
+			int[] re = new int[3];
+			re[0] = Integer.parseInt(coords[0]);
+			re[1] = Integer.parseInt(coords[1]);
+			re[2] = Integer.parseInt(coords[2]);
+			return re;
+		}
+		return new int[0];
 	}
 
 	private void send(int protocol, String message) {
-		connection.send(protocol + message);
-		Utility.log("Server to " + toString() + ":\t(" + protocol + ") " + message);
+		if (!connection.isClosed() && !connection.isClosing()) {
+			connection.send(protocol + message);
+			Utility.log("Server to " + toString() + ":\t(" + protocol + ") " + message);
+		} else {
+			Utility.log("Server failed to send message to " + toString() + ":\t(" + protocol + ") " + message);
+		}
 	}
 
 	public void sendConsoleMessage(String message) {
 		send(INFORMATION_CONSOLE, message);
 	}
 
-	private void waitForResponse() {
+	private boolean waitForResponse() {
 		int size = 0;
 		synchronized (response) {
 			size = response.size();
 		}
-		while (size == 0) {
+		while (size == 0 && !closed) {
 			try {
 				Thread.sleep(1);
 			} catch (Exception e) {
@@ -146,185 +163,191 @@ public class RemotePlayer extends Player {
 				size = response.size();
 			}
 		}
+		return !closed;
 	}
 
 	@Override
-	public void doTurn(CatanBoard board, ArrayList<PlayerData> players) {
+	public boolean doTurn(CatanBoard board, ArrayList<PlayerData> players) {
 		while (true) {
 			sendGameState(board, hand, devCards, game.buildPlayerData());
 			send(TURN, "");
-			waitForResponse();
-			String response = this.response.poll();
-			if (response.equals("")) {
-				break;
-			}
-			int protocol = Integer.parseInt("" + response.charAt(0));
-			response = response.substring(1);
-			char secondary = response.charAt(0);
-			if (secondary >= '0' && secondary <= '9') {
-				protocol = protocol * 10 + Integer.parseInt(secondary + "");
+			if (waitForResponse()) {
+				String response = this.response.poll();
+				if (response.equals("")) {
+					return true;
+				}
+				int protocol = Integer.parseInt("" + response.charAt(0));
 				response = response.substring(1);
-			}
-			if (protocol == TURN_DEV_CARD) {
-				int res = buy(TURN_DEV_CARD, "");
-				if (res == 1) {
-					sendConsoleMessage("You do not have the resources to purchase a development card.");
-				} else if (res == 2) {
-					sendConsoleMessage("There are no development cards left to purchase.");
+				char secondary = response.charAt(0);
+				if (secondary >= '0' && secondary <= '9') {
+					protocol = protocol * 10 + Integer.parseInt(secondary + "");
+					response = response.substring(1);
 				}
-			} else if (protocol == TURN_KNIGHT) {
-				boolean valid = false;
-				DevelopmentCard c = null;
-				for (DevelopmentCard card : devCards) {
-					if (card instanceof Knight && !card.isGainedThisTurn()) {
-						valid = true;
-						c = card;
-						break;
+				if (protocol == TURN_DEV_CARD) {
+					int res = buy(TURN_DEV_CARD, "");
+					if (res == 1) {
+						sendConsoleMessage("You do not have the resources to purchase a development card.");
+					} else if (res == 2) {
+						sendConsoleMessage("There are no development cards left to purchase.");
 					}
-				}
-				if (valid) {
-					playDevelopmentCard(c, null);
-				} else {
-					sendConsoleMessage("You do not have a knight card to play.");
-				}
-			} else if (protocol == TURN_MONOPOLY) {
-				boolean valid = false;
-				DevelopmentCard c = null;
-				for (DevelopmentCard card : devCards) {
-					if (card instanceof Monopoly && !card.isGainedThisTurn()) {
-						valid = true;
-						c = card;
-						break;
-					}
-				}
-				if (valid) {
-					playDevelopmentCard(c, response);
-				} else {
-					sendConsoleMessage("You do not have a monopoly card to play.");
-				}
-			} else if (protocol == TURN_SETTLEMENT) {
-				int res = buy(protocol, response);
-				if (res == 1) {
-					sendConsoleMessage("You cannot place a settlement there.");
-				} else if (res == 2) {
-					sendConsoleMessage("You do not have the resources to build a settlement.");
-				} else {
-					game.broadcastConsoleMessage(name + " has just built a new settlement.");
-				}
-			} else if (protocol == TURN_ROAD) {
-				int res = buy(protocol, response);
-				if (res == 1) {
-					sendConsoleMessage("You cannot place a road there.");
-				} else if (res == 2) {
-					sendConsoleMessage("You do not have the resources to build a road.");
-				} else {
-					game.broadcastConsoleMessage(name + " has just built a new road.");
-				}
-			} else if (protocol == TURN_CITY) {
-				int res = buy(protocol, response);
-				if (res == 1) {
-					sendConsoleMessage("You cannot place a city there.");
-				} else if (res == 2) {
-					sendConsoleMessage("You do not have the resources to build a city.");
-				} else {
-					game.broadcastConsoleMessage(name + " has just built a new city.");
-				}
-			} else if (protocol == TRADE_BANK) {
-				int res = bankTrade(response);
-				if (res == 1) {
-					sendConsoleMessage("You have submitted an invalid trade.");
-				} else if (res == 2) {
-					sendConsoleMessage("You do not have the resources to make that trade.");
-				} else {
-					String[] split = response.split(" ");
-					int[] amounts = new int[10];
-					for (int i = 0; i < split.length; i++) {
-						amounts[i] = Integer.parseInt(split[i]);
-					}
-					String trade = "";
-					boolean added = false;
-					for (int i = 0; i < 5; i++) {
-						if (amounts[i] > 0) {
-							if (added) trade += " + ";
-							trade += amounts[i] + " x " + Hand.intToCard(i);
-							added = true;
+				} else if (protocol == TURN_KNIGHT) {
+					boolean valid = false;
+					DevelopmentCard c = null;
+					for (DevelopmentCard card : devCards) {
+						if (card instanceof Knight && !card.isGainedThisTurn()) {
+							valid = true;
+							c = card;
+							break;
 						}
 					}
-					trade += " for ";
-					added = false;
-					for (int i = 5; i < 10; i++) {
-						if (amounts[i] > 0) {
-							if (added) trade += " + ";
-							trade += amounts[i] + " x " + Hand.intToCard(i - 5);
-							added = true;
+					if (valid) {
+						playDevelopmentCard(c, null);
+					} else {
+						sendConsoleMessage("You do not have a knight card to play.");
+					}
+				} else if (protocol == TURN_MONOPOLY) {
+					boolean valid = false;
+					DevelopmentCard c = null;
+					for (DevelopmentCard card : devCards) {
+						if (card instanceof Monopoly && !card.isGainedThisTurn()) {
+							valid = true;
+							c = card;
+							break;
 						}
 					}
-					game.broadcastConsoleMessage(name + " has just traded with the bank: " + trade + ".");
-				}
-			} else if (protocol == TRADE_PLAYERS) {
-				int res = playerTrade(response);
-				if (res == -1) {
-					sendConsoleMessage("You have submitted an invalid trade.");
-				} else if (res == -2) {
-					game.broadcastConsoleMessage(name + " has cancelled his trade.");
-				} else {
-					String[] split = response.split(" ");
-					int[] amounts = new int[10];
-					for (int i = 0; i < split.length; i++) {
-						amounts[i] = Integer.parseInt(split[i]);
+					if (valid) {
+						playDevelopmentCard(c, response);
+					} else {
+						sendConsoleMessage("You do not have a monopoly card to play.");
 					}
-					String trade = "";
-					boolean added = false;
-					for (int i = 0; i < 5; i++) {
-						if (amounts[i] > 0) {
-							if (added) trade += " + ";
-							trade += amounts[i] + " x " + Hand.intToCard(i);
-							added = true;
+				} else if (protocol == TURN_SETTLEMENT) {
+					int res = buy(protocol, response);
+					if (res == 1) {
+						sendConsoleMessage("You cannot place a settlement there.");
+					} else if (res == 2) {
+						sendConsoleMessage("You do not have the resources to build a settlement.");
+					} else {
+						game.broadcastConsoleMessage(name + " has just built a new settlement.");
+					}
+				} else if (protocol == TURN_ROAD) {
+					int res = buy(protocol, response);
+					if (res == 1) {
+						sendConsoleMessage("You cannot place a road there.");
+					} else if (res == 2) {
+						sendConsoleMessage("You do not have the resources to build a road.");
+					} else {
+						game.broadcastConsoleMessage(name + " has just built a new road.");
+					}
+				} else if (protocol == TURN_CITY) {
+					int res = buy(protocol, response);
+					if (res == 1) {
+						sendConsoleMessage("You cannot place a city there.");
+					} else if (res == 2) {
+						sendConsoleMessage("You do not have the resources to build a city.");
+					} else {
+						game.broadcastConsoleMessage(name + " has just built a new city.");
+					}
+				} else if (protocol == TRADE_BANK) {
+					int res = bankTrade(response);
+					if (res == 1) {
+						sendConsoleMessage("You have submitted an invalid trade.");
+					} else if (res == 2) {
+						sendConsoleMessage("You do not have the resources to make that trade.");
+					} else {
+						String[] split = response.split(" ");
+						int[] amounts = new int[10];
+						for (int i = 0; i < split.length; i++) {
+							amounts[i] = Integer.parseInt(split[i]);
+						}
+						String trade = "";
+						boolean added = false;
+						for (int i = 0; i < 5; i++) {
+							if (amounts[i] > 0) {
+								if (added) trade += " + ";
+								trade += amounts[i] + " x " + Hand.intToCard(i);
+								added = true;
+							}
+						}
+						trade += " for ";
+						added = false;
+						for (int i = 5; i < 10; i++) {
+							if (amounts[i] > 0) {
+								if (added) trade += " + ";
+								trade += amounts[i] + " x " + Hand.intToCard(i - 5);
+								added = true;
+							}
+						}
+						game.broadcastConsoleMessage(name + " has just traded with the bank: " + trade + ".");
+					}
+				} else if (protocol == TRADE_PLAYERS) {
+					int res = playerTrade(response);
+					if (res == -1) {
+						sendConsoleMessage("You have submitted an invalid trade.");
+					} else if (res == -2) {
+						game.broadcastConsoleMessage(name + " has cancelled his trade.");
+					} else if (res == -3) {
+						return false;
+					} else {
+						String[] split = response.split(" ");
+						int[] amounts = new int[10];
+						for (int i = 0; i < split.length; i++) {
+							amounts[i] = Integer.parseInt(split[i]);
+						}
+						String trade = "";
+						boolean added = false;
+						for (int i = 0; i < 5; i++) {
+							if (amounts[i] > 0) {
+								if (added) trade += " + ";
+								trade += amounts[i] + " x " + Hand.intToCard(i);
+								added = true;
+							}
+						}
+						trade += " for ";
+						added = false;
+						for (int i = 5; i < 10; i++) {
+							if (amounts[i] > 0) {
+								if (added) trade += " + ";
+								trade += amounts[i] + " x " + Hand.intToCard(i - 5);
+								added = true;
+							}
+						}
+						game.broadcastConsoleMessage(name + " has just traded with " + game.getPlayers().get(res).getName() + ": " + trade + ".");
+					}
+				} else if (protocol == TURN_RB) {
+					boolean valid = false;
+					DevelopmentCard c = null;
+					for (DevelopmentCard card : devCards) {
+						if (card instanceof RoadBuilding && !card.isGainedThisTurn()) {
+							valid = true;
+							c = card;
+							break;
 						}
 					}
-					trade += " for ";
-					added = false;
-					for (int i = 5; i < 10; i++) {
-						if (amounts[i] > 0) {
-							if (added) trade += " + ";
-							trade += amounts[i] + " x " + Hand.intToCard(i - 5);
-							added = true;
+					if (valid) {
+						playDevelopmentCard(c, response);
+					} else {
+						sendConsoleMessage("You do not have a Road Building card to play.");
+					}
+				} else if (protocol == TURN_YOP) {
+					boolean valid = false;
+					DevelopmentCard c = null;
+					for (DevelopmentCard card : devCards) {
+						if (card instanceof YearOfPlenty && !card.isGainedThisTurn()) {
+							valid = true;
+							c = card;
+							break;
 						}
 					}
-					game.broadcastConsoleMessage(name + " has just traded with " + game.getPlayers().get(res).getName() + ": " + trade + ".");
-				}
-			} else if (protocol == TURN_RB) {
-				boolean valid = false;
-				DevelopmentCard c = null;
-				for (DevelopmentCard card : devCards) {
-					if (card instanceof RoadBuilding && !card.isGainedThisTurn()) {
-						valid = true;
-						c = card;
-						break;
+					if (valid) {
+						playDevelopmentCard(c, response);
+					} else {
+						sendConsoleMessage("You do not have a Year of Plenty card to play.");
 					}
-				}
-				if (valid) {
-					playDevelopmentCard(c, response);
 				} else {
-					sendConsoleMessage("You do not have a Road Building card to play.");
-				}
-			} else if (protocol == TURN_YOP) {
-				boolean valid = false;
-				DevelopmentCard c = null;
-				for (DevelopmentCard card : devCards) {
-					if (card instanceof YearOfPlenty && !card.isGainedThisTurn()) {
-						valid = true;
-						c = card;
-						break;
-					}
-				}
-				if (valid) {
-					playDevelopmentCard(c, response);
-				} else {
-					sendConsoleMessage("You do not have a Year of Plenty card to play.");
+					Utility.log("Unknown message type: " + response);
 				}
 			} else {
-				Utility.log("Unknown message type: " + response);
+				return false;
 			}
 		}
 	}
@@ -337,17 +360,19 @@ public class RemotePlayer extends Player {
 		json += "\"trade\":" + Arrays.toString(trade);
 		json += "}";
 		send(TRADE, json);
-		waitForResponse();
-		String response = this.response.poll().substring(2);
-		if (response.equals("reject")) {
-			return new int[0];
+		if (waitForResponse()) {
+			String response = this.response.poll().substring(2);
+			if (response.equals("reject")) {
+				return new int[0];
+			}
+			String[] data = response.split(" ");
+			int[] amounts = new int[10];
+			for (int i = 0; i < data.length; i++) {
+				amounts[i] = Integer.parseInt(data[i]);
+			}
+			return amounts;
 		}
-		String[] data = response.split(" ");
-		int[] amounts = new int[10];
-		for (int i = 0; i < data.length; i++) {
-			amounts[i] = Integer.parseInt(data[i]);
-		}
-		return amounts;
+		return new int[1];
 	}
 
 	@Override
@@ -358,31 +383,35 @@ public class RemotePlayer extends Player {
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 		}
-		waitForResponse();
-		String response = this.response.poll();
-		String prefix = TRADE + "";
-		if (response.startsWith(prefix)) {
-			return Integer.parseInt(response.substring(prefix.length()));
+		if (waitForResponse()) {
+			String response = this.response.poll();
+			String prefix = TRADE + "";
+			if (response.startsWith(prefix)) {
+				return Integer.parseInt(response.substring(prefix.length()));
+			}
+			return -1;
 		}
-		return -1;
+		return -2;
 	}
 
 	@Override
 	public int[] getDiscard(CatanBoard board, ArrayList<PlayerData> players, int amount) {
 		send(ROBBER_DISCARD, amount + "");
-		waitForResponse();
-		String response = this.response.poll();
-		String prefix = ROBBER_DISCARD + "";
-		if (response.startsWith(prefix)) {
-			String[] data = response.substring(prefix.length()).split(" ");
-			int[] re = new int[5];
-			for (int i = 0; i < 5; i++) {
-				re[i] = Integer.parseInt(data[i]);
+		if (waitForResponse()) {
+			String response = this.response.poll();
+			String prefix = ROBBER_DISCARD + "";
+			if (response.startsWith(prefix)) {
+				String[] data = response.substring(prefix.length()).split(" ");
+				int[] re = new int[5];
+				for (int i = 0; i < 5; i++) {
+					re[i] = Integer.parseInt(data[i]);
+				}
+				sendGameState(board, hand, devCards, players);
+				return re;
 			}
-			sendGameState(board, hand, devCards, players);
-			return re;
+			return new int[5];
 		}
-		return new int[5];
+		return new int[0];
 	}
 
 	@Override
@@ -398,14 +427,16 @@ public class RemotePlayer extends Player {
 		String re;
 		String response;
 		do {
-			waitForResponse();
-			response = this.response.poll();
+			if (waitForResponse()) {
+				response = this.response.poll();
+			} else return "";
 		} while (!response.startsWith(prefix));
 		re = response.substring(prefix.length());
 		prefix = PLACE_ROAD + "";
 		do {
-			waitForResponse();
-			response = this.response.poll();
+			if (waitForResponse()) {
+				response = this.response.poll();
+			} else return "";
 		} while (!response.startsWith(prefix));
 		re += " " + response.substring(prefix.length());
 		return re;

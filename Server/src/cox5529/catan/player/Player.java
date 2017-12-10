@@ -52,7 +52,7 @@ public abstract class Player {
 
 	public abstract int[] moveRobber(CatanBoard board, ArrayList<PlayerData> players);
 
-	public abstract void doTurn(CatanBoard board, ArrayList<PlayerData> players);
+	public abstract boolean doTurn(CatanBoard board, ArrayList<PlayerData> players);
 
 	public abstract String getPlacement(CatanBoard board, ArrayList<PlayerData> players, boolean giveCards);
 
@@ -64,12 +64,13 @@ public abstract class Player {
 
 	public abstract boolean isReady();
 
-	public final void onSeven(CatanBoard board, ArrayList<PlayerData> players) {
+	public final boolean onSeven(CatanBoard board, ArrayList<PlayerData> players) {
 		if (hand.getSize() > 7) {
 			int amt = hand.getSize() / 2;
 			int a = amt;
 			while (amt > 0) {
 				int[] discard = getDiscard(board, players, amt);
+				if (discard.length == 0) return false;
 				for (int i = 0; i < 5; i++) {
 					if (hand.getCount(i) >= discard[i]) {
 						hand.removeCard(i, discard[i]);
@@ -79,14 +80,19 @@ public abstract class Player {
 			}
 			game.broadcastConsoleMessage("The robber has stolen " + a + " cards from " + name + ".");
 		}
+		return true;
 	}
 
 	public String toLobbyObject() {
 		return String.format("{\"name\":\"%s\",\"ready\":%b}", name, isReady());
 	}
 
-	public void place(CatanBoard board, ArrayList<PlayerData> players, boolean giveCards) {
-		String[] data = getPlacement(board, players, giveCards).split(" ");
+	public boolean place(CatanBoard board, ArrayList<PlayerData> players, boolean giveCards) {
+		String result = getPlacement(board, players, giveCards);
+		if (result.equals("")) {
+			return false;
+		}
+		String[] data = result.split(" ");
 		int spaceDiag = Integer.parseInt(data[0]);
 		int spaceCol = Integer.parseInt(data[1]);
 		int spaceId = Integer.parseInt(data[2]);
@@ -110,6 +116,7 @@ public abstract class Player {
 		} else {
 			place(board, players, giveCards);
 		}
+		return true;
 	}
 
 	private void buildSettlement(int diag, int col, int spaceId) {
@@ -120,11 +127,11 @@ public abstract class Player {
 		settlement.setSpace(space);
 	}
 
-	public final void onTurn(CatanBoard board, ArrayList<PlayerData> players) {
+	public final boolean onTurn(CatanBoard board, ArrayList<PlayerData> players) {
 		for (DevelopmentCard developmentCard : devCards) {
 			developmentCard.setGainedThisTurn(false);
 		}
-		doTurn(board, players);
+		return doTurn(board, players);
 	}
 
 	public final int playerTrade(String data) {
@@ -135,7 +142,7 @@ public abstract class Player {
 		}
 		int[][] responses = game.doTrade(this, amounts);
 		int tradeId = sendTradeResponses(responses);
-		if (tradeId != -1) {
+		if (tradeId >= 0) {
 			int playerId = tradeId;
 			if (tradeId >= team) playerId++;
 			Player player = game.getPlayers().get(playerId);
@@ -165,6 +172,8 @@ public abstract class Player {
 				return tradeId;
 			}
 			return -1;
+		} else if (tradeId == -2) {
+			return -3;
 		}
 		return -2;
 	}
@@ -456,8 +465,20 @@ public abstract class Player {
 		this.game = game;
 	}
 
-	public AIPlayer toAIPlayer() {//TODO implement
-		return null;
+	public AIPlayer toAIPlayer() {
+		AIPlayer player = new AIPlayer(team, game);
+		player.getDevCards().clear();
+		player.getPlayedDevCards().clear();
+		player.setHand(hand.copy());
+		for (DevelopmentCard card : playedDevCards)
+			player.getPlayedDevCards().add(card);
+		for (DevelopmentCard card : devCards)
+			player.getDevCards().add(card);
+		for (CatanBuilding building : buildings) {
+			player.getBuildings().add(building);
+			building.setPlayer(player);
+		}
+		return player;
 	}
 
 	public RemotePlayer toRemotePlayer(RemotePlayer player) {

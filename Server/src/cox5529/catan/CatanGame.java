@@ -79,7 +79,10 @@ public class CatanGame implements Runnable {
 	}
 
 	public void removePlayer(Player player, String reason) {
+		int index = players.indexOf(player);
 		players.remove(player);
+		AIPlayer ai = player.toAIPlayer();
+		players.add(index, ai);
 		broadcastGameState();
 		broadcastConsoleMessage(player.getName() + " has left the game. Reason: " + reason);
 		boolean allAI = true;
@@ -121,10 +124,10 @@ public class CatanGame implements Runnable {
 		return players;
 	}
 
-	public void moveRobber(Player player) {
+	public boolean moveRobber(Player player) {
 		int[] robberPos = player.moveRobber(board, buildPlayerData());
 		Robber robber = board.getRobber();
-		while (robberPos[0] == robber.getDiagonal() && robberPos[1] == robber.getColumn()) {
+		while (robberPos.length != 0 && robberPos[0] == robber.getDiagonal() && robberPos[1] == robber.getColumn()) {
 			boolean validSteal = false;
 			CatanTile tile = board.getTiles()[robberPos[0]][robberPos[1]];
 			for (CatanSpace space : tile.getSpaces()) {
@@ -138,6 +141,9 @@ public class CatanGame implements Runnable {
 			}
 			robberPos = player.moveRobber(board, buildPlayerData());
 		}
+		if (robberPos.length == 0) {
+			return false;
+		}
 		board.moveRobber(robberPos[0], robberPos[1]);
 		broadcastGameState();
 		broadcastConsoleMessage(player.getName() + " has moved the robber!");
@@ -148,6 +154,7 @@ public class CatanGame implements Runnable {
 			broadcastConsoleMessage(player.getName() + " has stolen a " + c + " from " + stolen.getName() + ".");
 		}
 		broadcastGameState();
+		return true;
 	}
 
 	public void broadcastConsoleMessage(String message) {
@@ -175,11 +182,17 @@ public class CatanGame implements Runnable {
 	}
 
 	public int[][] doTrade(Player source, int[] trade) {
-		int[][] re = new int[3][];
+		int[][] re = new int[players.size() - 1][];
 		int idx = 0;
-		for (Player player : players) {
-			if (player != source) {
+		int sourceId = players.indexOf(source);
+		for (int i = 0; i < players.size(); i++) {
+			Player player = players.get(i);
+			if (i != sourceId) {
 				int[] response = player.sendTradeOffer(board, buildPlayerData(), source.getTeam(), trade);
+				while (response.length == 1) {
+					player = players.get(i);
+					response = player.sendTradeOffer(board, buildPlayerData(), source.getTeam(), trade);
+				}
 				re[idx] = response;
 				idx++;
 			}
@@ -188,6 +201,7 @@ public class CatanGame implements Runnable {
 	}
 
 	private void doTurn(Player player) {
+		int playerId = players.indexOf(player);
 		int roll = getDiceRoll();
 		broadcastGameState();
 		broadcastConsoleMessage("It is now " + player.getName() + "'s turn. " + player.getName() + " rolled a " + roll + ".");
@@ -202,7 +216,13 @@ public class CatanGame implements Runnable {
 			Thread[] t = new Thread[players.size()];
 			for (Player robbed : players) {
 				ArrayList<PlayerData> data = buildPlayerData();
-				Runnable r = () -> robbed.onSeven(board, data);
+				Runnable r = () -> {
+					int playerId1 = players.indexOf(robbed);
+					Player p = robbed;
+					while (!p.onSeven(board, data)) {
+						p = players.get(playerId1);
+					}
+				};
 				t[robbed.getTeam()] = new Thread(r);
 				t[robbed.getTeam()].start();
 			}
@@ -217,9 +237,13 @@ public class CatanGame implements Runnable {
 				} catch (Exception e) {
 				}
 			}
-			moveRobber(player);
+			while (!moveRobber(player)) {
+				player = players.get(playerId);
+			}
 		}
-		player.onTurn(board, buildPlayerData());
+		while (!player.onTurn(board, buildPlayerData())) {
+			player = players.get(playerId);
+		}
 	}
 
 	public int countPoints(Player player) {
@@ -271,7 +295,9 @@ public class CatanGame implements Runnable {
 			Player player = players.get(cur);
 			broadcastConsoleMessage("It is now " + player.getName() + "'s turn to place.");
 			broadcastGameState();
-			player.place(board, buildPlayerData(), true);
+			while (!player.place(board, buildPlayerData(), true)) {
+				player = players.get(cur);
+			}
 			cur++;
 			if (cur == players.size()) cur = 0;
 		} while (cur != first);
@@ -281,11 +307,14 @@ public class CatanGame implements Runnable {
 			Player player = players.get(cur);
 			broadcastConsoleMessage("It is now " + player.getName() + "'s turn to place.");
 			broadcastGameState();
-			player.place(board, buildPlayerData(), false);
+			while (!player.place(board, buildPlayerData(), false)) {
+				player = players.get(cur);
+			}
 		} while (cur != first);
 		boolean game = true;
 		while (game && !kill) {
-			for (Player player : players) {
+			for (int i = 0; i < players.size(); i++) {
+				Player player = players.get(i);
 				doTurn(player);
 				int roadLen = player.calculateRoadLength();
 				if (roadLen >= 5 && longestRoad != player) {

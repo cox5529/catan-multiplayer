@@ -68,6 +68,10 @@ $(document).ready(function () {
 		socket.send(INFORMATION_USERNAME + "" + username);
 	};
 	
+	socket.onclose = function (ev) {
+		showMessage("You have been disconnected from the game.");
+	};
+	
 	var onsubmit = function (e) {
 		e.preventDefault();
 		var form = $("#form");
