@@ -1,6 +1,7 @@
 package cox5529.catan;
 
 
+import cox5529.Main;
 import cox5529.catan.board.CatanBoard;
 import cox5529.catan.board.CatanSpace;
 import cox5529.catan.board.CatanTile;
@@ -19,6 +20,8 @@ public class CatanGame implements Runnable {
 
 	private CatanBoard board;
 	private int id;
+	private String winner;
+	private String name;
 	private final ArrayList<Player> players;
 	private ArrayList<DevelopmentCard> devCardDeck;
 
@@ -27,7 +30,7 @@ public class CatanGame implements Runnable {
 
 	private boolean kill;
 
-	public CatanGame(int playerCount) {
+	public CatanGame(int playerCount, String name) {
 		board = CatanBoard.generate();
 		players = new ArrayList<>();
 		for (int i = 0; i < playerCount; i++) {
@@ -50,6 +53,8 @@ public class CatanGame implements Runnable {
 			devCardDeck.add(new RoadBuilding());
 		}
 		Collections.shuffle(devCardDeck);
+		winner = "In progress";
+		this.name = name;
 	}
 
 	public void addPlayer(RemotePlayer player) {
@@ -267,6 +272,20 @@ public class CatanGame implements Runnable {
 		}
 	}
 
+	public String toJSON() {
+		String re = "{";
+		re += "\"name\":\"" + name + "\"";
+		re += ",\"participants\":[";
+		for (int i = 0; i < players.size(); i++) {
+			re += "\"" + players.get(i).getName() + "\"";
+			if (i != players.size() - 1) re += ",";
+		}
+		re += "]";
+		re += ",\"winner\":\"" + winner + "\"";
+		re += ",\"id\":" + id;
+		return re + "}";
+	}
+
 	private void lobby() {
 		boolean ready = false;
 		while (!ready) {
@@ -338,6 +357,7 @@ public class CatanGame implements Runnable {
 				}
 				int vp = countPoints(player);
 				if (vp >= 10) {
+					winner = player.getName();
 					broadcastConsoleMessage(player.getName() + " has won the game with " + vp + " victory points!");
 					broadcastGameState();
 					game = false;
@@ -349,5 +369,6 @@ public class CatanGame implements Runnable {
 				}
 			}
 		}
+		if(kill) winner = "No players";
 	}
 }

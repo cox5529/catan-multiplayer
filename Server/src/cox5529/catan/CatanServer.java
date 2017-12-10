@@ -10,6 +10,8 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 public class CatanServer extends WebSocketServer {
 
@@ -30,7 +32,7 @@ public class CatanServer extends WebSocketServer {
 	@Override
 	public void onOpen(WebSocket conn, ClientHandshake handshake) {
 		Utility.log("Player connected");
-		players.put(conn, new RemotePlayer(conn));
+		players.put(conn, new RemotePlayer(conn, this));
 	}
 
 	@Override
@@ -63,7 +65,7 @@ public class CatanServer extends WebSocketServer {
 	}
 
 	public void startGame(String key, RemotePlayer creator, int players) {
-		CatanGame game = new CatanGame(players);
+		CatanGame game = new CatanGame(players, key);
 		game.setId(nextGameID);
 		nextGameID++;
 		games.put(key, game);
@@ -75,5 +77,18 @@ public class CatanServer extends WebSocketServer {
 
 	public CatanGame getGame(String name) {
 		return games.get(name);
+	}
+
+	public String getGameList() {
+		String re = "[";
+		int idx = 0;
+		for (Map.Entry<String, CatanGame> entry : games.entrySet()) {
+			CatanGame game = entry.getValue();
+			if (idx != 0) re += ",";
+			re += game.toJSON();
+			idx++;
+		}
+		re += "]";
+		return re;
 	}
 }

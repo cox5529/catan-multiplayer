@@ -11,6 +11,5 @@ public class Main {
 	public static void main(String[] args) throws UnknownHostException {
 		CatanServer server = new CatanServer(1185);
 		server.start();
-		//CatanBoard.generate();
 	}
 }

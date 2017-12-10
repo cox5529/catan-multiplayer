@@ -14,6 +14,9 @@ var lastClick = {x: -1, y: -1};
 var settlements = [];
 var roads = [];
 
+var gameList = [];
+var showTable = true;
+var updateList = null;
 var onInput = null;
 var inputArg = null;
 
@@ -59,6 +62,8 @@ $(document).ready(function () {
 			discard(parseInt(msg));
 		} else if (protocol === GAMESTATE_LOBBY) {
 			updateLobby(JSON.parse(msg));
+		} else if (protocol === GAMESTATE_GAME_LIST && showTable) {
+			showGameList(JSON.parse(msg));
 		} else {
 			console.log(event.data);
 		}
@@ -72,26 +77,96 @@ $(document).ready(function () {
 		showMessage("You have been disconnected from the game.");
 	};
 	
-	var onsubmit = function (e) {
-		e.preventDefault();
-		var form = $("#form");
-		var data = form.find(":input").serializeArray();
-		var val = {name: "submit", value: $("input[type=submit][clicked=true]").val()};
-		data.push(val);
-		
-		if (data[1].value === "New Game") {
-			newGame(data[0].value);
-		} else {
-			socket.send(GAME_JOIN + "" + data[0].value);
-			form.html("");
-		}
-	};
-	
-	updateForm(null, onsubmit);
 	var b = $("#board");
 	xOffsetGlobal = b[0].width / 2 - 4 * HEX_WIDTH / 2;
 	yOffsetGlobal = b[0].height / 2 - 5 * HEX_HEIGHT / 2;
+	
+	buildGameList([]);
+	updateList = setInterval(updateGameList, 1000);
 });
+
+function updateGameList() {
+	socket.send(GAMESTATE_GAME_LIST);
+}
+
+function showGameList(data) {
+	var table = $("#game-list");
+	for (var i = 0; i < data.length; i++) {
+		var game = data[i];
+		if (gameList.length === 0 || game.id > gameList[gameList.length - 1].id) {
+			var html = "<tr>";
+			html += "<td>" + game.name + "</td>";
+			html += "<td>";
+			for (var j = 0; j < game.participants.length; j++) {
+				if (j !== 0) html += ", ";
+				html += game.participants[j];
+			}
+			html += "</td>";
+			html += "<td>" + game.winner + "</td>";
+			if (game.winner === "In progress") {
+				html += "<td><input type='submit' value='Join' name='" + game.name + "' class='btn btn-primary btn-sm' /></td>";
+			} else {
+				html += "<td></td>";
+			}
+			html += "</tr>";
+			table.prepend(html);
+			gameList.push(game);
+		}
+	}
+	$("#form").find("input[type=submit]").click(function () {
+		$("input[type=submit]", $(this).parents("form")).removeAttr("clicked");
+		$(this).attr("clicked", "true");
+	});
+}
+
+function buildGameList(data) {
+	var html = "<table class='table table-sm'>";
+	html += "<thead>";
+	html += "<tr><th>Game name</th><th>Participants</th><th>Winner</th><th>Actions</th></tr>";
+	html += "</thead>";
+	html += "<tbody id='game-list'>";
+	for (var i = 0; i < data.length; i++) {
+		var game = data[i];
+		html += "<tr>";
+		html += "<td>" + game.name + "</td>";
+		html += "<td>";
+		for (var j = 0; j < game.participants.length; j++) {
+			if (j !== 0) html += ", ";
+			html += game.participants[j];
+		}
+		html += "</td>";
+		html += "<td>" + game.winner + "</td>";
+		if (game.winner === "In progress") {
+			html += "<td><input type='submit' value='Join' name='" + game.name + "' class='btn btn-primary btn-sm' /></td>";
+		} else {
+			html += "<td></td>";
+		}
+		html += "</tr>";
+	}
+	html += "<tr>";
+	html += "<td colspan='3'><input type='text' name='name' placeholder='Game name' class='form-control' /></td>"
+	html += "<td><input type='submit' value='New game' class='btn btn-primary' /></td>";
+	html += "</tr>";
+	html += "</tbody></table>";
+	var onsubmit = function (e) {
+		e.preventDefault();
+		var clicked = $("input[type=submit][clicked=true]");
+		var val = clicked.attr('value');
+		var name = clicked.attr('name');
+		
+		var data = $("#form").find(":input").serializeArray();
+		if (val === "Join") {
+			socket.send(GAME_JOIN + "" + name);
+			showTable = false;
+			clearInterval(updateList);
+		} else if (val === "New game") {
+			newGame(data[0].value);
+			showTable = false;
+			clearInterval(updateList);
+		}
+	};
+	updateForm(html, onsubmit);
+}
 
 function newGame(name) {
 	var form = $("#form");
@@ -134,6 +209,7 @@ function updateLobby(lobby) {
 	}
 	for (var i = 0; i < lobby.length; i++) {
 		var player = lobby[i];
+		$("#" + i + "-name").html(player.name);
 		if (player.ready) {
 			$("#" + i + "-ready").html("check");
 		} else {
@@ -153,7 +229,7 @@ function buildLobby(lobby) {
 	for (var i = 0; i < lobby.length; i++) {
 		var player = lobby[i];
 		html += "<tr>";
-		html += "   <td>" + player.name + "</td>";
+		html += "   <td id='" + i + "-name'>" + player.name + "</td>";
 		if (player.ready) {
 			html += "<td><i id='" + i + "-ready' class='material-icons'>check</i></td>";
 		} else {
@@ -565,7 +641,6 @@ function buildTradeMenu(data=null) {
 }
 
 function acceptOffer(data) {
-	console.log(data);
 	var html = buildTradeMenu(data);
 	
 	var onsubmit = function (e) {
@@ -611,7 +686,6 @@ function acceptOffer(data) {
 }
 
 function selectOffer(responses) {
-	console.log(responses);
 	var playerId = 0;
 	var html = "";
 	html += "<div id='accordion' role='tablist'>";

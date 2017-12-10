@@ -46,21 +46,25 @@ public class RemotePlayer extends Player {
 	public static final int GAMESTATE_HAND = 82;
 	public static final int GAMESTATE_DEV_CARDS = 83;
 	public static final int GAMESTATE_LOBBY = 84;
+	public static final int GAMESTATE_GAME_LIST = 85;
 
 	public static final int READY = 90;
 
 	@JsonIgnore
 	private WebSocket connection;
+	@JsonIgnore
+	private CatanServer server;
 	private boolean ready;
 	private final Queue<String> response;
 	private boolean closed;
 
-	public RemotePlayer(WebSocket connection) {
+	public RemotePlayer(WebSocket connection, CatanServer server) {
 		super();
 		this.connection = connection;
 		ready = false;
 		response = new LinkedList<>();
 		closed = false;
+		this.server = server;
 	}
 
 	public WebSocket getConnection() {
@@ -88,6 +92,8 @@ public class RemotePlayer extends Player {
 			}
 		} else if (message.startsWith(READY + "")) {
 			ready = !ready;
+		} else if (message.startsWith(GAMESTATE_GAME_LIST + "")) {
+			send(GAMESTATE_GAME_LIST, server.getGameList());
 		}
 	}
 
