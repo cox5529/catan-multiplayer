@@ -9,7 +9,6 @@ import cox5529.catan.board.CatanBoard;
 import cox5529.catan.devcard.*;
 import org.java_websocket.WebSocket;
 
-import javax.rmi.CORBA.Util;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;

@@ -7,19 +7,26 @@ import cox5529.catan.board.building.CatanBuilding;
 import cox5529.catan.board.building.Settlement;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Set;
+import java.util.Collections;
 
-public class CatanBoard {
+public class CatanBoard implements Comparable {
 
 	private CatanTile[][] tiles; // diagonal, column
 	private CatanPort[] ports;
 	private CatanLink[] links;
 	private ArrayList<CatanSpace> spaces;
 	private Robber robber;
+	private double fitness;
 
 	public CatanBoard() {
 		fillArrays();
+		spaces = new ArrayList<>();
+		robber = new Robber(0, 0, null);
+	}
+
+	private CatanBoard(CatanTile[][] tiles, CatanPort[] ports) {
+		this.tiles = tiles;
+		this.ports = ports;
 		spaces = new ArrayList<>();
 		robber = new Robber(0, 0, null);
 	}
@@ -79,6 +86,7 @@ public class CatanBoard {
 	}
 
 	private void fillSecondaryArrays() {
+		spaces.clear();
 		for (int i = 0; i < tiles.length; i++) {
 			for (int j = 0; j < tiles[i].length; j++) {
 				if (tiles[i][j] != null) {
@@ -493,7 +501,7 @@ public class CatanBoard {
 	}
 
 	public static int getRollCount(int roll) {
-		switch(roll) {
+		switch (roll) {
 			case 2:
 				return 1;
 			case 3:
@@ -521,8 +529,19 @@ public class CatanBoard {
 		}
 	}
 
+	public double getFitness() {
+		return fitness;
+	}
+
+	private void calculateFitness() {
+		double fitness = 0;
+		for (CatanSpace space : spaces) {
+			fitness += space.calculateFitness();
+		}
+		this.fitness = fitness;
+	}
+
 	public static CatanBoard generate() {
-		Utility.log("Generating board");
 		CatanBoard board = new CatanBoard();
 		board.shuffleArrays();
 		int[] rolls = new int[18];
@@ -564,8 +583,122 @@ public class CatanBoard {
 		board.fillSecondaryArrays();
 		board.linkElements();
 		board.placeRobber();
-		Utility.log("Generated board");
+		board.calculateFitness();
 		return board;
 	}
 
+	private static CatanBoard mutate(CatanBoard a) {
+		CatanTile[][] aTiles = a.getTiles();
+		CatanTile[][] rTiles = new CatanTile[6][5];
+		CatanPort[] aPorts = a.getPorts();
+		CatanPort[] rPorts = new CatanPort[18];
+		ArrayList<int[]> points = new ArrayList<>();
+		for (int i = 0; i < aTiles.length; i++) {
+			for (int j = 0; j < aTiles[i].length; j++) {
+				if (aTiles[i][j] != null && aTiles[i][j].getResource() != Card.None) {
+					points.add(new int[]{i, j});
+				}
+			}
+		}
+		ArrayList<Integer> edges = new ArrayList<>();
+		for (int i = 0; i < 6; i++) {
+			edges.add(i);
+		}
+		for (int i = 0; i < aTiles.length; i++) {
+			for (int j = 0; j < aTiles[i].length; j++) {
+				if (aTiles[i][j] != null) {
+					CatanTile aTile = aTiles[i][j];
+					CatanTile tile = new CatanTile(aTile.getResource(), aTile.getExteriorStart(), aTile.getExteriorEnd());
+					tile.setRoll(aTile.getRoll());
+					rTiles[i][j] = tile;
+				}
+			}
+		}
+		for (int i = 0; i < aPorts.length; i++) {
+			CatanPort aPort = aPorts[i];
+			if (aPort != null) {
+				CatanPort port = new CatanPort(aPort.getType());
+				rPorts[i] = port;
+			}
+		}
+
+		// pick 2 resources to swap
+		int[] first = points.remove((int) (Math.random() * points.size()));
+		int[] second = points.remove((int) (Math.random() * points.size()));
+		int i = first[0];
+		int j = first[1];
+		int x = second[0];
+		int y = second[1];
+		CatanTile tile1 = rTiles[i][j];
+		CatanTile tile2 = rTiles[x][y];
+		Card temp = tile1.getResource();
+		tile1.setResource(tile2.getResource());
+		tile2.setResource(temp);
+
+		// pick 2 numbers to swap
+		first = points.remove((int) (Math.random() * points.size()));
+		second = points.remove((int) (Math.random() * points.size()));
+		i = first[0];
+		j = first[1];
+		x = second[0];
+		y = second[1];
+		tile1 = rTiles[i][j];
+		tile2 = rTiles[x][y];
+		int t = tile1.getRoll();
+		tile1.setRoll(tile2.getRoll());
+		tile2.setRoll(t);
+
+		// pick 2 edges to swap
+		int one = edges.remove((int) (Math.random() * edges.size()));
+		int two = edges.remove((int) (Math.random() * edges.size()));
+		for (int k = 0; k < 3; k++) {
+			CatanPort b = rPorts[one * 3 + k];
+			rPorts[one * 3 + k] = rPorts[two * 3 + k];
+			rPorts[two * 3 + k] = b;
+		}
+
+		CatanBoard board = new CatanBoard(rTiles, rPorts);
+		board.fillSecondaryArrays();
+		board.linkElements();
+		board.placeRobber();
+		board.calculateFitness();
+		return board;
+	}
+
+	private static ArrayList<CatanBoard> doGeneration(ArrayList<CatanBoard> boards) {
+		ArrayList<CatanBoard> re = new ArrayList<>();
+		for (int i = 0; i < boards.size(); i++) {
+			CatanBoard board = boards.get((int) (0.1 * boards.size() * i / boards.size()));
+			re.add(mutate(board));
+		}
+		Collections.sort(re);
+		Utility.log("" + re.get(0).getFitness());
+		return re;
+	}
+
+	public static CatanBoard generateGenetic(int count, int generations) {
+		ArrayList<CatanBoard> boards = new ArrayList<>();
+		for (int i = 0; i < count; i++) {
+			boards.add(CatanBoard.generate());
+		}
+		Collections.sort(boards);
+		for (int i = 0; i < generations; i++) {
+			boards = doGeneration(boards);
+			Utility.log(i + "");
+		}
+		CatanBoard board = boards.get(0);
+		board.fillSecondaryArrays();
+		board.linkElements();
+		board.placeRobber();
+		return board;
+	}
+
+	@Override
+	public int compareTo(Object o) {
+		if (o instanceof CatanBoard) {
+			CatanBoard other = (CatanBoard) o;
+			if (other.getFitness() > getFitness()) return 1;
+		}
+		return -1;
+	}
 }
